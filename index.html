@@ -122,7 +122,7 @@
     .c-bl { bottom: 10px; left: 10px; border-width: 0 0 3px 3px; border-bottom-left-radius: 6px; }
     .c-br { bottom: 10px; right: 10px; border-width: 0 3px 3px 0; border-bottom-right-radius: 6px; }
 
-    .progress-header { display: flex; justify-content: space-between; align-items: center; margin: 14px 0 6px; font-size: 13px; font-weight: 700; color: #0071BA; }
+    .progress-header { display: flex; justify-content: space-between; align-items: center; margin: 14px 0 6px; font-size: 13px; font-weight: 700; color: #0071BA; gap: 8px; }
     .progress-track { width: 100%; height: 10px; background: #e2e8f0; border-radius: 99px; overflow: hidden; }
     .progress-fill { height: 100%; width: 0%; background: linear-gradient(90deg, #0071BA, #38bdf8); border-radius: 99px; transition: width 0.25s ease; }
 
@@ -280,7 +280,7 @@
       </div>
     </div>
 
-    <!-- หน้าสแกนเลเซอร์ (แยกข้อความสถานะ 4 ข้อตามโหมดเอกสาร vs รูปพนักงานอัตโนมัติ) -->
+    <!-- หน้าสแกนเลเซอร์ (แยกข้อความสถานะ 4 ข้อตาม 3 โหมด: idcard / bookbank / portrait) -->
     <div id="scannerView" class="card hidden">
       <div class="scanner-frame">
         <img id="previewImg" src="" alt="Document Preview">
@@ -302,7 +302,7 @@
       <div class="step-list">
         <div id="st1" class="step-item"><div class="step-dot">1</div><span id="st1Text">อัพโหลดรูปภาพ</span></div>
         <div id="st2" class="step-item"><div class="step-dot">2</div><span id="st2Text">GEGEE กำลังอ่านข้อมูล</span></div>
-        <div id="st3" class="step-item"><div class="step-dot">3</div><span id="st3Text">ตรวจสอบอายุ 18 ปีบริบูรณ์ และ ชื่อตรงกัน</span></div>
+        <div id="st3" class="step-item"><div class="step-dot">3</div><span id="st3Text">ตรวจสอบอายุ 18 ปีบริบูรณ์</span></div>
         <div id="st4" class="step-item"><div class="step-dot">4</div><span id="st4Text">กำลังบันทึกข้อมูล</span></div>
       </div>
     </div>
@@ -322,6 +322,37 @@
   <script>
     const LIFF_ID = "2012520828-w5obRhCf";
     const GAS_API_URL = "https://script.google.com/macros/s/AKfycbwzxU3dGAvGIJHu-WFT4REqH9OgD7EMO8pPg_vbEQ3gkUgZciVsyDOG4S25agNKKaCz7A/exec";
+
+    // ตารางข้อความสถานะทั้ง 4 ข้อ แยกเฉพาะตามโหมดทั้ง 3 รายการ
+    const STEP_CONFIG_BY_MODE = {
+      idcard: {
+        steps: [
+          'อัพโหลดรูปภาพ',
+          'GEGEE กำลังอ่านข้อมูล',
+          'ตรวจสอบอายุ 18 ปีบริบูรณ์',
+          'กำลังบันทึกข้อมูล'
+        ],
+        doneText: 'บันทึกข้อมูลบัตรประชาชนเสร็จสมบูรณ์!'
+      },
+      bookbank: {
+        steps: [
+          'อัพโหลดรูปภาพ',
+          'GEGEE กำลังอ่านข้อมูล',
+          'ตรวจสอบเลขบัญชี และ ชื่อตรงกับบัตรประชาชน',
+          'กำลังบันทึกข้อมูล'
+        ],
+        doneText: 'บันทึกข้อมูลสมุดบัญชีเสร็จสมบูรณ์!'
+      },
+      portrait: {
+        steps: [
+          'อัพโหลดรูปภาพ',
+          'GEGEE กำลังตรวจสอบภาพใบหน้า',
+          'ตรวจสอบภาพเดี่ยวหน้าตรงและแสงสว่าง',
+          'กำลังบันทึกข้อมูล'
+        ],
+        doneText: 'บันทึกรูปถ่ายพนักงานเสร็จสมบูรณ์!'
+      }
+    };
 
     let activeUserId = "";
     let progressTimer = null;
@@ -465,17 +496,13 @@
       document.getElementById('nativeCameraInput').setAttribute('capture', isPortrait ? 'user' : 'environment');
     }
 
-    // สลับข้อความเช็กลิสต์ 4 ข้อให้ตรงกับโหมดรูปพนักงาน vs โหมดเอกสาร
+    // อัปเดตข้อความ 4 ขั้นตอนตามโหมดปัจจุบัน (idcard / bookbank / portrait)
     function applyScannerStepTexts(mode) {
-      const isPortrait = (mode === 'portrait');
-      document.getElementById('st1Text').innerText = 'อัพโหลดรูปภาพ';
-      document.getElementById('st2Text').innerText = isPortrait
-        ? 'GEGEE กำลังตรวจสอบภาพใบหน้า'
-        : 'GEGEE กำลังอ่านข้อมูล';
-      document.getElementById('st3Text').innerText = isPortrait
-        ? 'ตรวจสอบภาพเดี่ยวหน้าตรงและแสงสว่าง'
-        : 'ตรวจสอบอายุ 18 ปีบริบูรณ์ และ ชื่อตรงกัน';
-      document.getElementById('st4Text').innerText = 'กำลังบันทึกข้อมูล';
+      const cfg = STEP_CONFIG_BY_MODE[mode] || STEP_CONFIG_BY_MODE.idcard;
+      document.getElementById('st1Text').innerText = cfg.steps[0];
+      document.getElementById('st2Text').innerText = cfg.steps[1];
+      document.getElementById('st3Text').innerText = cfg.steps[2];
+      document.getElementById('st4Text').innerText = cfg.steps[3];
     }
 
     async function startStreamWithFacing(facing) {
@@ -636,22 +663,14 @@
       document.getElementById('percentText').innerText = pct + '%';
       document.getElementById('progressFill').style.width = pct + '%';
 
-      const isPortrait = (currentDocMode === 'portrait');
-      const labels = isPortrait
-        ? [
-            { min: 0, text: 'อัพโหลดรูปภาพ...' },
-            { min: 25, text: 'GEGEE กำลังตรวจสอบภาพใบหน้า...' },
-            { min: 60, text: 'ตรวจสอบภาพเดี่ยวหน้าตรงและแสงสว่าง...' },
-            { min: 82, text: 'กำลังบันทึกข้อมูล...' },
-            { min: 100, text: 'บันทึกรูปพนักงานเสร็จสมบูรณ์!' }
-          ]
-        : [
-            { min: 0, text: 'อัพโหลดรูปภาพ...' },
-            { min: 25, text: 'GEGEE กำลังอ่านข้อมูล...' },
-            { min: 60, text: 'ตรวจสอบอายุ 18 ปีบริบูรณ์ และ ชื่อตรงกัน...' },
-            { min: 82, text: 'กำลังบันทึกข้อมูล...' },
-            { min: 100, text: 'บันทึกข้อมูลเสร็จสมบูรณ์!' }
-          ];
+      const cfg = STEP_CONFIG_BY_MODE[currentDocMode] || STEP_CONFIG_BY_MODE.idcard;
+      const labels = [
+        { min: 0, text: cfg.steps[0] + '...' },
+        { min: 25, text: cfg.steps[1] + '...' },
+        { min: 60, text: cfg.steps[2] + '...' },
+        { min: 82, text: cfg.steps[3] + '...' },
+        { min: 100, text: cfg.doneText }
+      ];
 
       for (let i = labels.length - 1; i >= 0; i--) {
         if (pct >= labels[i].min) {
