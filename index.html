@@ -9,139 +9,67 @@
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Prompt', -apple-system, sans-serif; }
     body {
-      background: #f4f7fb;
-      color: #1e293b;
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-      overflow-x: hidden;
+      background: #f4f7fb; color: #1e293b; min-height: 100vh;
+      display: flex; flex-direction: column; overflow-x: hidden;
     }
     .sheet-header {
       background: linear-gradient(135deg, #0071BA 0%, #005288 100%);
-      color: #fff;
-      padding: 14px 18px;
-      border-bottom-left-radius: 18px;
-      border-bottom-right-radius: 18px;
+      color: #fff; padding: 14px 18px;
+      border-bottom-left-radius: 18px; border-bottom-right-radius: 18px;
       box-shadow: 0 4px 14px rgba(0, 113, 186, 0.22);
     }
-    .grabber {
-      width: 40px; height: 4px;
-      background: rgba(255,255,255,0.4);
-      border-radius: 99px;
-      margin: 0 auto 8px;
-    }
+    .grabber { width: 40px; height: 4px; background: rgba(255,255,255,0.4); border-radius: 99px; margin: 0 auto 8px; }
     .header-title { font-size: 16px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
     .branch-pill {
-      margin-top: 6px;
-      display: inline-block;
-      background: rgba(255,255,255,0.16);
-      border: 1px solid rgba(255,255,255,0.28);
-      padding: 3px 10px;
-      border-radius: 8px;
-      font-size: 12px;
-      color: #e0f2fe;
+      margin-top: 6px; display: inline-block; background: rgba(255,255,255,0.16);
+      border: 1px solid rgba(255,255,255,0.28); padding: 3px 10px; border-radius: 8px; font-size: 12px; color: #e0f2fe;
     }
     .container { padding: 14px; flex: 1; display: flex; flex-direction: column; gap: 12px; }
 
-    .card {
-      background: #ffffff;
-      border-radius: 16px;
-      padding: 16px;
-      box-shadow: 0 2px 10px rgba(15, 23, 42, 0.06);
-    }
+    .card { background: #ffffff; border-radius: 16px; padding: 16px; box-shadow: 0 2px 10px rgba(15, 23, 42, 0.06); }
     .hint-banner {
-      background: #e8f4fc;
-      border-left: 4px solid #0071BA;
-      padding: 9px 12px;
-      border-radius: 8px;
-      font-size: 12.5px;
-      color: #005288;
-      font-weight: 600;
-      margin-bottom: 12px;
+      background: #e8f4fc; border-left: 4px solid #0071BA; padding: 9px 12px;
+      border-radius: 8px; font-size: 12.5px; color: #005288; font-weight: 600; margin-bottom: 12px;
     }
 
-    /* แถบสลับโหมด 3 รายการ (บัตร ปชช. / สมุดบัญชี / รูปพนักงาน) */
+    /* แถบสลับโหมด 3 รายการ */
     .doc-tabs {
       display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 5px;
       background: #f1f5f9; padding: 4px; border-radius: 10px; margin-bottom: 12px;
     }
     .doc-tab {
       border: none; background: transparent; padding: 8px 4px; border-radius: 8px;
-      font-size: 11.5px; font-weight: 600; color: #64748b; cursor: pointer; transition: all 0.15s;
-      white-space: nowrap;
+      font-size: 11.5px; font-weight: 600; color: #64748b; cursor: pointer; transition: all 0.15s; white-space: nowrap;
     }
-    .doc-tab.active {
-      background: #0071BA; color: #ffffff; box-shadow: 0 2px 6px rgba(0, 113, 186, 0.25);
-    }
+    .doc-tab.active { background: #0071BA; color: #ffffff; box-shadow: 0 2px 6px rgba(0, 113, 186, 0.25); }
+    .doc-tab:disabled { background: #e2e8f0 !important; color: #94a3b8 !important; cursor: not-allowed; opacity: 0.6; box-shadow: none !important; }
 
-    /* ตัวอย่าง Guideline จำลองก่อนเปิดกล้อง */
-    .sample-guide {
-      background: #f8fafc; border: 2px dashed #0071BA; border-radius: 12px;
-      padding: 12px; margin-bottom: 12px; position: relative;
-    }
-    .sample-id-layout {
-      display: flex; justify-content: space-between; align-items: flex-end; gap: 10px; min-height: 86px;
-    }
+    .sample-guide { background: #f8fafc; border: 2px dashed #0071BA; border-radius: 12px; padding: 12px; margin-bottom: 12px; position: relative; }
+    .sample-id-layout { display: flex; justify-content: space-between; align-items: flex-end; gap: 10px; min-height: 86px; }
     .sample-lines { flex: 1; display: flex; flex-direction: column; gap: 6px; }
-    .s-badge {
-      display: inline-block; font-size: 10px; background: #e0f2fe; color: #005288;
-      padding: 2px 7px; border-radius: 4px; font-weight: 700; width: fit-content;
-    }
+    .s-badge { display: inline-block; font-size: 10px; background: #e0f2fe; color: #005288; padding: 2px 7px; border-radius: 4px; font-weight: 700; width: fit-content; }
     .s-line { height: 7px; background: #cbd5e1; border-radius: 4px; }
-    .s-line.w80 { width: 85%; }
-    .s-line.w60 { width: 65%; }
-    .sample-photo {
-      width: 48px; height: 60px; border: 1.5px dashed #0071BA; background: #e8f4fc;
-      border-radius: 6px; display: flex; align-items: center; justify-content: center;
-      font-size: 10px; color: #0071BA; font-weight: 700; text-align: center; flex-shrink: 0;
-    }
-    .sample-portrait-icon {
-      width: 64px; height: 78px; border: 1.5px dashed #10b981; background: #ecfdf5;
-      border-radius: 10px; display: flex; align-items: center; justify-content: center;
-      flex-shrink: 0;
-    }
-    .guide-tips {
-      display: flex; justify-content: space-between; font-size: 11px; color: #475569;
-      margin-top: 8px; padding-top: 8px; border-top: 1px solid #e2e8f0;
-    }
-    .tip-ok { color: #16a34a; font-weight: 600; }
-    .tip-no { color: #dc2626; font-weight: 600; }
+    .s-line.w80 { width: 85%; } .s-line.w60 { width: 65%; }
+    .sample-photo { width: 48px; height: 60px; border: 1.5px dashed #0071BA; background: #e8f4fc; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 10px; color: #0071BA; font-weight: 700; text-align: center; flex-shrink: 0; }
+    .sample-portrait-icon { width: 64px; height: 78px; border: 1.5px dashed #10b981; background: #ecfdf5; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .guide-tips { display: flex; justify-content: space-between; font-size: 11px; color: #475569; margin-top: 8px; padding-top: 8px; border-top: 1px solid #e2e8f0; }
+    .tip-ok { color: #16a34a; font-weight: 600; } .tip-no { color: #dc2626; font-weight: 600; }
 
-    /* กล้องสดพร้อมกรอบเล็ง Guideline (Live Camera View) */
     .camera-stage {
       position: relative; width: 100%; height: 270px; background: #0f172a;
-      border-radius: 14px; overflow: hidden; display: flex; align-items: center; justify-content: center;
-      transition: height 0.2s ease;
+      border-radius: 14px; overflow: hidden; display: flex; align-items: center; justify-content: center; transition: height 0.2s ease;
     }
-    .camera-stage.portrait-stage {
-      height: 340px;
-    }
+    .camera-stage.portrait-stage { height: 340px; }
     #liveVideo { width: 100%; height: 100%; object-fit: cover; }
     #liveVideo.mirror { transform: scaleX(-1); }
 
-    .overlay-mask {
-      position: absolute; inset: 0; display: flex; flex-direction: column;
-      align-items: center; justify-content: center; pointer-events: none; padding: 14px;
-    }
+    .overlay-mask { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; pointer-events: none; padding: 14px; }
     .guide-box {
       position: relative; width: 88%; max-width: 310px; aspect-ratio: 1.586 / 1;
-      border: 2px solid rgba(56, 189, 248, 0.95); border-radius: 12px;
-      box-shadow: 0 0 0 9999px rgba(15, 23, 42, 0.62);
-      transition: all 0.2s ease;
+      border: 2px solid rgba(56, 189, 248, 0.95); border-radius: 12px; box-shadow: 0 0 0 9999px rgba(15, 23, 42, 0.62); transition: all 0.2s ease;
     }
-    .guide-box.bookbank-mode {
-      aspect-ratio: 1.42 / 1;
-      border-color: #fbbf24;
-    }
-    /* กรอบแนวตั้งสำหรับถ่ายภาพเดี่ยวพนักงาน (3:4) */
-    .guide-box.portrait-mode {
-      width: auto;
-      height: 82%;
-      max-width: 235px;
-      aspect-ratio: 3 / 4;
-      border-color: #34d399;
-      border-radius: 18px;
-    }
+    .guide-box.bookbank-mode { aspect-ratio: 1.42 / 1; border-color: #fbbf24; }
+    .guide-box.portrait-mode { width: auto; height: 82%; max-width: 235px; aspect-ratio: 3 / 4; border-color: #34d399; border-radius: 18px; }
 
     .g-corner { position: absolute; width: 22px; height: 22px; border-color: #ffffff; border-style: solid; }
     .gc-tl { top: -2px; left: -2px; border-width: 4px 0 0 4px; border-top-left-radius: 10px; }
@@ -149,114 +77,43 @@
     .gc-bl { bottom: -2px; left: -2px; border-width: 0 0 4px 4px; border-bottom-left-radius: 10px; }
     .gc-br { bottom: -2px; right: -2px; border-width: 0 4px 4px 0; border-bottom-right-radius: 10px; }
 
-    /* ไกด์บัตรประชาชน */
     .id-inner-guides { position: absolute; inset: 0; }
-    .guide-idnum {
-      position: absolute; top: 10%; left: 26%; right: 8%; height: 16%;
-      border: 1px dashed rgba(255,255,255,0.75); border-radius: 4px;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 9.5px; color: #e0f2fe; background: rgba(0, 82, 136, 0.35); font-weight: 600;
-    }
-    .guide-name {
-      position: absolute; top: 32%; left: 10%; right: 34%; height: 26%;
-      border: 1px dashed rgba(255,255,255,0.65); border-radius: 4px;
-      display: flex; align-items: center; padding-left: 6px;
-      font-size: 9.5px; color: #ffffff; background: rgba(15, 23, 42, 0.28);
-    }
-    .guide-photo {
-      position: absolute; bottom: 10%; right: 7%; width: 23%; height: 48%;
-      border: 1.5px dashed rgba(56, 189, 248, 0.95); border-radius: 5px;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 9.5px; color: #bae6fd; background: rgba(0, 113, 186, 0.28); text-align: center; font-weight: 600;
-    }
+    .guide-idnum { position: absolute; top: 10%; left: 26%; right: 8%; height: 16%; border: 1px dashed rgba(255,255,255,0.75); border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 9.5px; color: #e0f2fe; background: rgba(0, 82, 136, 0.35); font-weight: 600; }
+    .guide-name { position: absolute; top: 32%; left: 10%; right: 34%; height: 26%; border: 1px dashed rgba(255,255,255,0.65); border-radius: 4px; display: flex; align-items: center; padding-left: 6px; font-size: 9.5px; color: #ffffff; background: rgba(15, 23, 42, 0.28); }
+    .guide-photo { position: absolute; bottom: 10%; right: 7%; width: 23%; height: 48%; border: 1.5px dashed rgba(56, 189, 248, 0.95); border-radius: 5px; display: flex; align-items: center; justify-content: center; font-size: 9.5px; color: #bae6fd; background: rgba(0, 113, 186, 0.28); text-align: center; font-weight: 600; }
 
-    /* ไกด์สมุดบัญชี */
     .book-inner-guides { position: absolute; inset: 0; }
-    .guide-bank-top {
-      position: absolute; top: 12%; left: 8%; right: 8%; height: 20%;
-      border: 1px dashed rgba(254, 240, 138, 0.8); border-radius: 5px;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 10px; color: #fef08a; background: rgba(15, 23, 42, 0.35);
-    }
-    .guide-bank-acc {
-      position: absolute; top: 40%; left: 8%; right: 8%; height: 36%;
-      border: 1.5px dashed #fbbf24; border-radius: 6px;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 10.5px; color: #ffffff; background: rgba(253, 113, 0, 0.28);
-      font-weight: 700; text-align: center; padding: 0 6px;
-    }
+    .guide-bank-top { position: absolute; top: 12%; left: 8%; right: 8%; height: 20%; border: 1px dashed rgba(254, 240, 138, 0.8); border-radius: 5px; display: flex; align-items: center; justify-content: center; font-size: 10px; color: #fef08a; background: rgba(15, 23, 42, 0.35); }
+    .guide-bank-acc { position: absolute; top: 40%; left: 8%; right: 8%; height: 36%; border: 1.5px dashed #fbbf24; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 10.5px; color: #ffffff; background: rgba(253, 113, 0, 0.28); font-weight: 700; text-align: center; padding: 0 6px; }
 
-    /* โครงร่างบุคคลเดี่ยว (ศีรษะ + หัวไหล่ครึ่งตัว) ในหน้ากล้อง */
-    .portrait-inner-guides {
-      position: absolute; inset: 0;
-      display: flex; flex-direction: column; align-items: center; justify-content: flex-end;
-      overflow: hidden; border-radius: 16px;
-    }
-    .portrait-svg {
-      width: 92%;
-      height: 90%;
-    }
-    .portrait-tag-top {
-      position: absolute; top: 8px;
-      background: rgba(16, 185, 129, 0.32);
-      border: 1px dashed rgba(167, 243, 208, 0.9);
-      color: #ecfdf5; font-size: 9.5px; font-weight: 600;
-      padding: 2px 8px; border-radius: 99px;
-    }
+    .portrait-inner-guides { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; overflow: hidden; border-radius: 16px; }
+    .portrait-svg { width: 92%; height: 90%; }
+    .portrait-tag-top { position: absolute; top: 8px; background: rgba(16, 185, 129, 0.32); border: 1px dashed rgba(167, 243, 208, 0.9); color: #ecfdf5; font-size: 9.5px; font-weight: 600; padding: 2px 8px; border-radius: 99px; }
 
-    /* ปุ่มสลับกล้องหน้า/หลัง ลอยมุมขวาบนของจอภาพสด */
     .btn-switch-cam {
-      position: absolute; top: 10px; right: 10px; z-index: 5;
-      background: rgba(15, 23, 42, 0.72); color: #ffffff;
-      border: 1px solid rgba(255,255,255,0.35);
-      padding: 6px 10px; border-radius: 99px;
-      font-size: 11.5px; font-weight: 600; cursor: pointer;
-      display: flex; align-items: center; gap: 4px;
+      position: absolute; top: 10px; right: 10px; z-index: 5; background: rgba(15, 23, 42, 0.72); color: #ffffff;
+      border: 1px solid rgba(255,255,255,0.35); padding: 6px 10px; border-radius: 99px; font-size: 11.5px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 4px;
     }
-
-    .camera-caption {
-      position: absolute; bottom: 8px; background: rgba(15, 23, 42, 0.82);
-      color: #ffffff; font-size: 11px; padding: 3px 11px; border-radius: 99px; font-weight: 600;
-    }
+    .camera-caption { position: absolute; bottom: 8px; background: rgba(15, 23, 42, 0.82); color: #ffffff; font-size: 11px; padding: 3px 11px; border-radius: 99px; font-weight: 600; }
     .cam-controls { display: flex; align-items: center; justify-content: space-between; margin-top: 12px; gap: 10px; }
-    .btn-shutter {
-      flex: 1; background: #0071BA; color: #ffffff; border: none; padding: 13px;
-      border-radius: 12px; font-size: 15px; font-weight: 700; cursor: pointer;
-      box-shadow: 0 4px 12px rgba(0,113,186,0.3);
-    }
-    .btn-back-cam {
-      background: #f1f5f9; color: #475569; border: none; padding: 13px 14px;
-      border-radius: 12px; font-size: 13px; font-weight: 600; cursor: pointer;
-    }
+    .btn-shutter { flex: 1; background: #0071BA; color: #ffffff; border: none; padding: 13px; border-radius: 12px; font-size: 15px; font-weight: 700; cursor: pointer; box-shadow: 0 4px 12px rgba(0,113,186,0.3); }
+    .btn-back-cam { background: #f1f5f9; color: #475569; border: none; padding: 13px 14px; border-radius: 12px; font-size: 13px; font-weight: 600; cursor: pointer; }
 
     .btn-grid { display: grid; grid-template-columns: 1fr; gap: 10px; }
-    .upload-btn {
-      display: flex; align-items: center; justify-content: center; gap: 8px;
-      width: 100%; padding: 14px; border-radius: 12px; border: none;
-      font-size: 14.5px; font-weight: 700; cursor: pointer; transition: transform 0.12s ease;
-    }
+    .upload-btn { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 14px; border-radius: 12px; border: none; font-size: 14.5px; font-weight: 700; cursor: pointer; transition: transform 0.12s ease; }
     .upload-btn:active { transform: scale(0.98); }
     .btn-camera { background: #0071BA; color: #ffffff; box-shadow: 0 4px 12px rgba(0,113,186,0.28); }
     .btn-album { background: #fff3e0; color: #c25500; border: 1.5px solid #fd7100; }
-    .native-cam-link {
-      display: block; text-align: center; margin-top: 10px;
-      font-size: 12px; color: #64748b; text-decoration: underline; cursor: pointer;
-    }
+    .native-cam-link { display: block; text-align: center; margin-top: 10px; font-size: 12px; color: #64748b; text-decoration: underline; cursor: pointer; }
     input[type="file"] { display: none; }
 
-    /* กรอบสแกนเลเซอร์ระหว่างประมวลผล AI */
     .hidden { display: none !important; }
     .scanner-frame {
-      position: relative; width: 100%; height: 185px; background: #0f172a;
-      border-radius: 14px; overflow: hidden; display: flex; align-items: center; justify-content: center;
-      border: 2px solid #0071BA;
+      position: relative; width: 100%; height: 185px; background: #0f172a; border-radius: 14px; overflow: hidden; display: flex; align-items: center; justify-content: center; border: 2px solid #0071BA;
     }
     .scanner-frame img { max-width: 92%; max-height: 88%; object-fit: contain; border-radius: 8px; opacity: 0.88; }
     .laser-line {
-      position: absolute; left: 0; right: 0; height: 3px;
-      background: linear-gradient(90deg, transparent, #38bdf8, #ffffff, #38bdf8, transparent);
-      box-shadow: 0 0 16px 4px rgba(56, 189, 248, 0.85);
-      animation: scanMove 2s ease-in-out infinite;
+      position: absolute; left: 0; right: 0; height: 3px; background: linear-gradient(90deg, transparent, #38bdf8, #ffffff, #38bdf8, transparent); box-shadow: 0 0 16px 4px rgba(56, 189, 248, 0.85); animation: scanMove 2s ease-in-out infinite;
     }
     @keyframes scanMove { 0% { top: 8%; } 50% { top: 88%; } 100% { top: 8%; } }
     .corner { position: absolute; width: 20px; height: 20px; border-color: #38bdf8; border-style: solid; }
@@ -265,24 +122,15 @@
     .c-bl { bottom: 10px; left: 10px; border-width: 0 0 3px 3px; border-bottom-left-radius: 6px; }
     .c-br { bottom: 10px; right: 10px; border-width: 0 3px 3px 0; border-bottom-right-radius: 6px; }
 
-    .progress-header {
-      display: flex; justify-content: space-between; align-items: center;
-      margin: 14px 0 6px; font-size: 13px; font-weight: 700; color: #0071BA;
-    }
+    .progress-header { display: flex; justify-content: space-between; align-items: center; margin: 14px 0 6px; font-size: 13px; font-weight: 700; color: #0071BA; }
     .progress-track { width: 100%; height: 10px; background: #e2e8f0; border-radius: 99px; overflow: hidden; }
-    .progress-fill {
-      height: 100%; width: 0%; background: linear-gradient(90deg, #0071BA, #38bdf8);
-      border-radius: 99px; transition: width 0.25s ease;
-    }
+    .progress-fill { height: 100%; width: 0%; background: linear-gradient(90deg, #0071BA, #38bdf8); border-radius: 99px; transition: width 0.25s ease; }
 
     .step-list { margin-top: 14px; display: flex; flex-direction: column; gap: 8px; }
     .step-item { display: flex; align-items: center; gap: 10px; font-size: 13px; color: #94a3b8; font-weight: 500; }
     .step-item.active { color: #0071BA; font-weight: 700; }
     .step-item.done { color: #16a34a; font-weight: 600; }
-    .step-dot {
-      width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
-      font-size: 11px; background: #f1f5f9; color: #94a3b8; flex-shrink: 0;
-    }
+    .step-dot { width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; background: #f1f5f9; color: #94a3b8; flex-shrink: 0; }
     .step-item.active .step-dot { background: #e0f2fe; color: #0071BA; animation: pulse 1s infinite; }
     .step-item.done .step-dot { background: #dcfce7; color: #16a34a; }
     @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.15); } }
@@ -291,14 +139,8 @@
     .result-icon { font-size: 50px; margin-bottom: 8px; }
     .result-title { font-size: 17px; font-weight: 700; margin-bottom: 6px; color: #0f172a; }
     .result-sub { font-size: 13px; color: #475569; line-height: 1.5; margin-bottom: 16px; white-space: pre-line; }
-    .btn-close {
-      background: #0071BA; color: #fff; width: 100%; padding: 13px;
-      border: none; border-radius: 12px; font-size: 15px; font-weight: 700; cursor: pointer;
-    }
-    .btn-retry {
-      background: #fd7100; color: #fff; width: 100%; padding: 13px;
-      border: none; border-radius: 12px; font-size: 15px; font-weight: 700; cursor: pointer; margin-bottom: 8px;
-    }
+    .btn-close { background: #0071BA; color: #fff; width: 100%; padding: 13px; border: none; border-radius: 12px; font-size: 15px; font-weight: 700; cursor: pointer; }
+    .btn-retry { background: #fd7100; color: #fff; width: 100%; padding: 13px; border: none; border-radius: 12px; font-size: 15px; font-weight: 700; cursor: pointer; margin-bottom: 8px; }
   </style>
 </head>
 <body>
@@ -310,21 +152,21 @@
   </div>
 
   <div class="container">
-    <!-- 1. หน้าแรก: ตัวอย่าง Guideline + ปุ่มเปิดกล้องเล็งกรอบ -->
     <div id="pickerView" class="card hidden">
-      <div id="statusHintBox" class="hint-banner">กรุณาส่ง บัตรประชาชน, สมุดบัญชี และ รูปถ่ายพนักงาน</div>
+      <div id="statusHintBox" class="hint-banner">กรุณาส่ง บัตรประชาชนเป็นอันดับแรก</div>
 
+      <!-- แถบเลือกหมวดเอกสาร (รองรับการ Disable หัวข้อที่ส่งสำเร็จแล้ว) -->
       <div class="doc-tabs">
         <button id="tabIdMain" class="doc-tab active" onclick="setDocMode('idcard')">🪪 บัตร ปชช.</button>
         <button id="tabBookMain" class="doc-tab" onclick="setDocMode('bookbank')">🏦 สมุดบัญชี</button>
         <button id="tabPhotoMain" class="doc-tab" onclick="setDocMode('portrait')">🧍 รูปพนักงาน</button>
       </div>
 
-      <!-- ตัวอย่างที่ 1: บัตรประชาชน -->
+      <!-- บัตรประชาชน -->
       <div id="sampleIdBox" class="sample-guide">
         <div class="sample-id-layout">
           <div class="sample-lines">
-            <span class="s-badge">วางด้านหน้าบัตรให้เต็มกรอบ</span>
+            <span class="s-badge">บังคับส่งเป็นอันดับแรก</span>
             <div class="s-line w80"></div>
             <div class="s-line w60"></div>
             <span style="font-size:10.5px; color:#0071BA; font-weight:600;">เห็นเลข 13 หลัก • ชื่อไทย • วันเกิดชัดเจน</span>
@@ -337,7 +179,7 @@
         </div>
       </div>
 
-      <!-- ตัวอย่างที่ 2: สมุดบัญชีธนาคาร -->
+      <!-- สมุดบัญชี -->
       <div id="sampleBookBox" class="sample-guide hidden" style="border-color:#fd7100;">
         <div class="sample-lines" style="min-height:86px; justify-content:center;">
           <span class="s-badge" style="background:#fff3e0; color:#c25500;">เปิดหน้าแรกที่มีเลขบัญชี & ชื่อบัญชี</span>
@@ -351,7 +193,7 @@
         </div>
       </div>
 
-      <!-- ตัวอย่างที่ 3: รูปถ่ายเดี่ยวพนักงาน -->
+      <!-- รูปถ่ายพนักงาน -->
       <div id="samplePhotoBox" class="sample-guide hidden" style="border-color:#10b981;">
         <div class="sample-id-layout" style="align-items:center;">
           <div class="sample-lines">
@@ -388,7 +230,7 @@
       <input id="nativeCameraInput" type="file" accept="image/*" capture="environment" onchange="handleFileSelect(this)">
     </div>
 
-    <!-- 1.5 หน้ากล้องสดพร้อมเส้น Guideline ทั้ง 3 รูปแบบ -->
+    <!-- หน้ากล้องสดพร้อมเส้น Guideline -->
     <div id="liveCameraView" class="card hidden">
       <div class="doc-tabs">
         <button id="tabIdCam" class="doc-tab active" onclick="setDocMode('idcard')">🪪 บัตร ปชช.</button>
@@ -407,29 +249,23 @@
             <div class="g-corner gc-bl"></div>
             <div class="g-corner gc-br"></div>
 
-            <!-- 1) ไกด์บัตรประชาชน -->
             <div id="idInnerGuides" class="id-inner-guides">
               <div class="guide-idnum">เลขบัตรประชาชน 13 หลัก</div>
               <div class="guide-name">ชื่อ-นามสกุล / วันเกิด</div>
               <div class="guide-photo">👤<br>รูปบัตร</div>
             </div>
 
-            <!-- 2) ไกด์สมุดบัญชี -->
             <div id="bookInnerGuides" class="book-inner-guides hidden">
               <div class="guide-bank-top">ชื่อธนาคาร / สาขา</div>
               <div class="guide-bank-acc">วางให้เห็น เลขที่บัญชี & ชื่อบัญชี ชัดเจน</div>
             </div>
 
-            <!-- 3) โครงร่างถ่ายภาพเดี่ยวบุคคล (ศีรษะ + แนวไหล่) -->
             <div id="portraitInnerGuides" class="portrait-inner-guides hidden">
               <div class="portrait-tag-top">จัดศีรษะและไหล่ให้พอดีโครงร่าง</div>
               <svg class="portrait-svg" viewBox="0 0 200 260" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <!-- เส้นกึ่งกลางใบหน้าเบาๆ -->
                 <line x1="100" y1="36" x2="100" y2="150" stroke="rgba(255,255,255,0.28)" stroke-width="1.2" stroke-dasharray="4 4"/>
                 <line x1="66" y1="92" x2="134" y2="92" stroke="rgba(255,255,255,0.28)" stroke-width="1.2" stroke-dasharray="4 4"/>
-                <!-- โครงร่างศีรษะ -->
                 <ellipse cx="100" cy="94" rx="42" ry="52" fill="rgba(16, 185, 129, 0.10)" stroke="#6ee7b7" stroke-width="2.6" stroke-dasharray="7 5"/>
-                <!-- โครงร่างคอและแนวหัวไหล่ครึ่งตัวบน -->
                 <path d="M22 256 C24 196, 58 168, 100 168 C142 168, 176 196, 178 256" fill="rgba(16, 185, 129, 0.10)" stroke="#6ee7b7" stroke-width="2.8" stroke-dasharray="8 5" stroke-linecap="round"/>
               </svg>
             </div>
@@ -444,7 +280,7 @@
       </div>
     </div>
 
-    <!-- 2. หน้าสแกนเลเซอร์ + 4 สถานะของ GEGEE -->
+    <!-- หน้าสแกนเลเซอร์ -->
     <div id="scannerView" class="card hidden">
       <div class="scanner-frame">
         <img id="previewImg" src="" alt="Document Preview">
@@ -471,7 +307,7 @@
       </div>
     </div>
 
-    <!-- 3. หน้าแสดงสถานะเสร็จสิ้น -->
+    <!-- หน้าแสดงผลลัพธ์ -->
     <div id="resultView" class="card hidden">
       <div class="result-box">
         <div id="resIcon" class="result-icon">✅</div>
@@ -491,8 +327,9 @@
     let progressTimer = null;
     let currentPercent = 0;
     let mediaStream = null;
-    let currentDocMode = "idcard"; // 'idcard' | 'bookbank' | 'portrait'
-    let cameraFacing = "environment"; // 'environment' | 'user'
+    let currentDocMode = "idcard";
+    let cameraFacing = "environment";
+    let completedModes = []; // รายการที่ส่งสำเร็จแล้ว
 
     function isValidDirectUid(uid) {
       return typeof uid === 'string' && /^U[0-9a-fA-F]{32}$/.test(uid.trim());
@@ -515,44 +352,24 @@
 
       try {
         await liff.init({ liffId: LIFF_ID });
-
         if (liff.isInClient()) {
           const ctx = liff.getContext();
-          if (ctx && (ctx.type === 'group' || ctx.type === 'room')) {
-            openedFromGroup = true;
-          }
-          if (!openedFromGroup && ctx && isValidDirectUid(ctx.userId)) {
-            activeUserId = ctx.userId.trim();
-          }
+          if (ctx && (ctx.type === 'group' || ctx.type === 'room')) openedFromGroup = true;
+          if (!openedFromGroup && ctx && isValidDirectUid(ctx.userId)) activeUserId = ctx.userId.trim();
         }
-
         if (!openedFromGroup && !activeUserId && liff.isLoggedIn()) {
           const profile = await liff.getProfile();
-          if (profile && isValidDirectUid(profile.userId)) {
-            activeUserId = profile.userId.trim();
-          }
+          if (profile && isValidDirectUid(profile.userId)) activeUserId = profile.userId.trim();
         }
       } catch (e) {}
 
       if (openedFromGroup) {
         document.getElementById('branchBadge').innerText = '🔒 ไม่อนุญาตให้ใช้ในแชทกลุ่ม';
-        showResult(
-          '🔒',
-          'ใช้งานได้เฉพาะแชทส่วนตัวเท่านั้น',
-          'กรุณาเปิดเข้าแชทส่วนตัวของ GeGee Ai โดยตรงเพื่อส่งเอกสารครับ (ห้ามใช้งานผ่านแชทกลุ่ม)',
-          false,
-          false
-        );
+        showResult('🔒', 'ใช้งานได้เฉพาะแชทส่วนตัวเท่านั้น', 'กรุณาเปิดเข้าแชทส่วนตัวของ GeGee Ai โดยตรงเพื่อส่งเอกสารครับ', false, false);
         return;
       }
 
-      if (!activeUserId && isValidDirectUid(urlUid)) {
-        activeUserId = urlUid;
-      }
-
-      if (['idcard', 'bookbank', 'portrait'].includes(initialMode)) {
-        setDocMode(initialMode);
-      }
+      if (!activeUserId && isValidDirectUid(urlUid)) activeUserId = urlUid;
 
       loadSession(activeUserId, initialMode);
     };
@@ -560,13 +377,7 @@
     async function loadSession(uid, forcedMode) {
       if (!isValidDirectUid(uid)) {
         document.getElementById('branchBadge').innerText = '🔒 ปิดรับการส่งรูปชั่วคราว';
-        showResult(
-          '🔒',
-          'กรุณาเปิดจากแชทส่วนตัว GeGee Ai',
-          'ไม่พบรหัสผู้ใช้งานส่วนตัว กรุณากดปุ่มจากในห้องแชทส่วนตัวของบอทเท่านั้นครับ',
-          false,
-          false
-        );
+        showResult('🔒', 'กรุณาเปิดจากแชทส่วนตัว GeGee Ai', 'ไม่พบรหัสผู้ใช้งานส่วนตัว กรุณากดปุ่มจากในห้องแชทส่วนตัวเท่านั้นครับ', false, false);
         return;
       }
 
@@ -579,9 +390,20 @@
         }
         document.getElementById('branchBadge').innerText = '📍 ' + info.branchDisplay;
         document.getElementById('statusHintBox').innerText = info.statusHint;
-        if (!forcedMode) {
-          if (info.recommendedMode) setDocMode(info.recommendedMode);
-          else autoSelectModeFromHint(info.statusHint);
+
+        completedModes = info.completedModes || [];
+        updateTabsState();
+
+        if (forcedMode && !completedModes.includes(forcedMode)) {
+          setDocMode(forcedMode);
+        } else {
+          if (info.recommendedMode && !completedModes.includes(info.recommendedMode)) {
+            setDocMode(info.recommendedMode);
+          } else {
+            // หาโหมดแรกที่ยังไม่สำเร็จ
+            const firstAvailable = ['idcard', 'bookbank', 'portrait'].find(m => !completedModes.includes(m)) || 'idcard';
+            setDocMode(firstAvailable);
+          }
         }
         document.getElementById('pickerView').classList.remove('hidden');
       } catch (err) {
@@ -590,18 +412,23 @@
       }
     }
 
-    function autoSelectModeFromHint(hint) {
-      if (!hint) return;
-      if (hint.indexOf('รูปถ่ายพนักงาน') !== -1 && hint.indexOf('ขาด:') !== -1 && hint.indexOf('บัตรประชาชน') === -1 && hint.indexOf('สมุดบัญชี') === -1) {
-        setDocMode('portrait');
-      } else if (hint.indexOf('สมุดบัญชี') !== -1 && hint.indexOf('บัตรประชาชน') === -1) {
-        setDocMode('bookbank');
-      } else {
-        setDocMode('idcard');
-      }
+    // อัปเดตสถานะปุ่ม: หากหัวข้อใดสำเร็จแล้วให้ disable ทันที (ข้อ 3)
+    function updateTabsState() {
+      const isIdDone = completedModes.includes('idcard');
+      const isBookDone = completedModes.includes('bookbank');
+      const isPhotoDone = completedModes.includes('portrait');
+
+      document.getElementById('tabIdMain').disabled = isIdDone;
+      document.getElementById('tabBookMain').disabled = isBookDone;
+      document.getElementById('tabPhotoMain').disabled = isPhotoDone;
+
+      document.getElementById('tabIdCam').disabled = isIdDone;
+      document.getElementById('tabBookCam').disabled = isBookDone;
+      document.getElementById('tabPhotoCam').disabled = isPhotoDone;
     }
 
     function setDocMode(mode) {
+      if (completedModes.includes(mode)) return; // ห้ามเลือกอันที่ทำเสร็จแล้ว
       currentDocMode = mode;
       const isId = (mode === 'idcard');
       const isBook = (mode === 'bookbank');
@@ -633,16 +460,11 @@
       document.getElementById('bookInnerGuides').classList.toggle('hidden', !isBook);
       document.getElementById('portraitInnerGuides').classList.toggle('hidden', !isPortrait);
 
-      if (isId) {
-        document.getElementById('camCaption').innerText = 'จัดบัตรประชาชนให้อยู่ในกรอบ แล้วกดถ่ายภาพ';
-      } else if (isBook) {
-        document.getElementById('camCaption').innerText = 'จัดหน้าสมุดบัญชีให้อยู่ในกรอบ แล้วกดถ่ายภาพ';
-      } else {
-        document.getElementById('camCaption').innerText = 'จัดศีรษะและไหล่ให้อยู่ในโครงร่าง (บุคคลเดี่ยวหน้าตรง)';
-      }
+      if (isId) document.getElementById('camCaption').innerText = 'จัดบัตรประชาชนให้อยู่ในกรอบ แล้วกดถ่ายภาพ';
+      else if (isBook) document.getElementById('camCaption').innerText = 'จัดหน้าสมุดบัญชีให้อยู่ในกรอบ แล้วกดถ่ายภาพ';
+      else document.getElementById('camCaption').innerText = 'จัดศีรษะและไหล่ให้อยู่ในโครงร่าง (บุคคลเดี่ยวหน้าตรง)';
 
-      const nativeCam = document.getElementById('nativeCameraInput');
-      nativeCam.setAttribute('capture', isPortrait ? 'user' : 'environment');
+      document.getElementById('nativeCameraInput').setAttribute('capture', isPortrait ? 'user' : 'environment');
     }
 
     async function startStreamWithFacing(facing) {
@@ -663,7 +485,6 @@
         return;
       }
       try {
-        // โหมดเอกสารเริ่มด้วยกล้องหลัง (environment) ส่วนรูปพนักงานเริ่มด้วยกล้องหลังแต่กดสลับกล้องหน้าเซลฟี่ได้ทันที
         await startStreamWithFacing('environment');
         document.getElementById('pickerView').classList.add('hidden');
         document.getElementById('liveCameraView').classList.remove('hidden');
@@ -674,9 +495,7 @@
 
     async function toggleCameraFacing() {
       const nextFacing = (cameraFacing === 'environment') ? 'user' : 'environment';
-      try {
-        await startStreamWithFacing(nextFacing);
-      } catch (e) {}
+      try { await startStreamWithFacing(nextFacing); } catch (e) {}
     }
 
     function stopLiveCamera() {
@@ -709,16 +528,12 @@
       let sw = boxRect.width / scale;
       let sh = boxRect.height / scale;
 
-      if (cameraFacing === 'user') {
-        sx = vw - sx - sw;
-      }
+      if (cameraFacing === 'user') sx = vw - sx - sw;
 
       const padRatio = (currentDocMode === 'portrait') ? 0.10 : 0.14;
       const padX = sw * padRatio, padY = sh * padRatio;
-      sx = Math.max(0, sx - padX);
-      sy = Math.max(0, sy - padY);
-      sw = Math.min(vw - sx, sw + padX * 2);
-      sh = Math.min(vh - sy, sh + padY * 2);
+      sx = Math.max(0, sx - padX); sy = Math.max(0, sy - padY);
+      sw = Math.min(vw - sx, sw + padX * 2); sh = Math.min(vh - sy, sh + padY * 2);
 
       let outW = Math.round(sw), outH = Math.round(sh);
       const maxDim = 1600;
@@ -731,8 +546,7 @@
       canvas.width = outW; canvas.height = outH;
       const ctx = canvas.getContext('2d');
       if (cameraFacing === 'user') {
-        ctx.translate(outW, 0);
-        ctx.scale(-1, 1);
+        ctx.translate(outW, 0); ctx.scale(-1, 1);
       }
       ctx.drawImage(video, sx, sy, sw, sh, 0, 0, outW, outH);
 
@@ -745,9 +559,7 @@
     function handleFileSelect(input) {
       if (!input.files || !input.files[0]) return;
       const reader = new FileReader();
-      reader.onload = function(e) {
-        compressImage(e.target.result, 1600, 0.86, submitBase64ToServer);
-      };
+      reader.onload = function(e) { compressImage(e.target.result, 1600, 0.86, submitBase64ToServer); };
       reader.readAsDataURL(input.files[0]);
       input.value = '';
     }
@@ -876,14 +688,12 @@
       const retryBtn = document.getElementById('retryBtn');
       if (allowRetryButton) {
         retryBtn.classList.remove('hidden');
-        retryBtn.innerText = icon === '💾' ? '📸 ส่งรายการถัดไปต่อทันที' : '📸 ถ่ายส่งใหม่อีกครั้ง';
+        retryBtn.innerText = icon === '💾' ? '📸 ส่งรายการที่เหลือต่อทันที' : '📸 ถ่ายส่งใหม่อีกครั้ง';
       } else {
         retryBtn.classList.add('hidden');
       }
 
-      if (autoClose) {
-        setTimeout(closeDrawer, 1000);
-      }
+      if (autoClose) setTimeout(closeDrawer, 1000);
     }
 
     async function resetToPicker() {
@@ -894,19 +704,22 @@
         const info = await callBackend({ action: 'liff_session', userId: activeUserId });
         if (info && info.allowed) {
           document.getElementById('statusHintBox').innerText = info.statusHint;
-          if (info.recommendedMode) setDocMode(info.recommendedMode);
-          else autoSelectModeFromHint(info.statusHint);
+          completedModes = info.completedModes || [];
+          updateTabsState();
+          if (info.recommendedMode && !completedModes.includes(info.recommendedMode)) {
+            setDocMode(info.recommendedMode);
+          } else {
+            const firstAvailable = ['idcard', 'bookbank', 'portrait'].find(m => !completedModes.includes(m)) || 'idcard';
+            setDocMode(firstAvailable);
+          }
         }
       } catch (e) {}
     }
 
     function closeDrawer() {
       stopLiveCamera();
-      if (window.liff && liff.isInClient()) {
-        liff.closeWindow();
-      } else {
-        window.close();
-      }
+      if (window.liff && liff.isInClient()) liff.closeWindow();
+      else window.close();
     }
   </script>
 </body>
