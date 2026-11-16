@@ -60,6 +60,7 @@
       margin-bottom: 12px;
     }
 
+    /* แถบสลับโหมดเอกสาร (บัตร ปชช. / สมุดบัญชี) */
     .doc-tabs {
       display: grid; grid-template-columns: 1fr 1fr; gap: 6px;
       background: #f1f5f9; padding: 4px; border-radius: 10px; margin-bottom: 12px;
@@ -72,6 +73,7 @@
       background: #0071BA; color: #ffffff; box-shadow: 0 2px 6px rgba(0, 113, 186, 0.25);
     }
 
+    /* ตัวอย่าง Guideline จำลองก่อนเปิดกล้อง */
     .sample-guide {
       background: #f8fafc; border: 2px dashed #0071BA; border-radius: 12px;
       padding: 12px; margin-bottom: 12px; position: relative;
@@ -99,6 +101,7 @@
     .tip-ok { color: #16a34a; font-weight: 600; }
     .tip-no { color: #dc2626; font-weight: 600; }
 
+    /* กล้องสดพร้อมกรอบเล็ง Guideline (Live Camera View) */
     .camera-stage {
       position: relative; width: 100%; height: 250px; background: #0f172a;
       border-radius: 14px; overflow: hidden; display: flex; align-items: center; justify-content: center;
@@ -185,6 +188,7 @@
     }
     input[type="file"] { display: none; }
 
+    /* กรอบสแกนเลเซอร์ระหว่างประมวลผล AI */
     .hidden { display: none !important; }
     .scanner-frame {
       position: relative; width: 100%; height: 185px; background: #0f172a;
@@ -250,6 +254,7 @@
   </div>
 
   <div class="container">
+    <!-- 1. หน้าแรก: ตัวอย่าง Guideline + ปุ่มเปิดกล้องเล็งกรอบ -->
     <div id="pickerView" class="card hidden">
       <div id="statusHintBox" class="hint-banner">กรุณาถ่ายรูปบัตรประชาชน หรือ หน้าสมุดบัญชี</div>
 
@@ -304,6 +309,7 @@
       <input id="nativeCameraInput" type="file" accept="image/*" capture="environment" onchange="handleFileSelect(this)">
     </div>
 
+    <!-- 1.5 หน้ากล้องสดพร้อมเส้น Guideline -->
     <div id="liveCameraView" class="card hidden">
       <div class="doc-tabs">
         <button id="tabIdCam" class="doc-tab active" onclick="setDocMode('idcard')">🪪 กรอบบัตรประชาชน</button>
@@ -340,6 +346,7 @@
       </div>
     </div>
 
+    <!-- 2. หน้าสแกนเลเซอร์ + 4 สถานะของ GEGEE -->
     <div id="scannerView" class="card hidden">
       <div class="scanner-frame">
         <img id="previewImg" src="" alt="Document Preview">
@@ -366,6 +373,7 @@
       </div>
     </div>
 
+    <!-- 3. หน้าแสดงสถานะเสร็จสิ้น -->
     <div id="resultView" class="card hidden">
       <div class="result-box">
         <div id="resIcon" class="result-icon">✅</div>
@@ -379,13 +387,17 @@
 
   <script>
     const LIFF_ID = "2012520828-w5obRhCf";
-    // 🔗 วางลิงก์ Web App URL (https://script.google.com/macros/s/.../exec) ของคุณตรงนี้
     const GAS_API_URL = "https://script.google.com/macros/s/AKfycbwzxU3dGAvGIJHu-WFT4REqH9OgD7EMO8pPg_vbEQ3gkUgZciVsyDOG4S25agNKKaCz7A/exec";
 
     let activeUserId = "";
     let progressTimer = null;
     let currentPercent = 0;
     let mediaStream = null;
+
+    // ตรวจสอบว่าเป็นรหัสแชทบุคคลเดี่ยวของ LINE (U...) เท่านั้น
+    function isValidDirectUid(uid) {
+      return typeof uid === 'string' && /^U[0-9a-fA-F]{32}$/.test(uid.trim());
+    }
 
     async function callBackend(payload) {
       const res = await fetch(GAS_API_URL, {
@@ -398,20 +410,64 @@
 
     window.onload = async function() {
       const params = new URLSearchParams(window.location.search);
-      activeUserId = params.get('uid') || '';
+      let urlUid = (params.get('uid') || '').trim();
+      let openedFromGroup = false;
 
       try {
         await liff.init({ liffId: LIFF_ID });
-        if (!activeUserId && liff.isLoggedIn()) {
+
+        if (liff.isInClient()) {
+          const ctx = liff.getContext();
+          // 🔒 บล็อกทันทีหากมีคนนำลิงก์ไปกดเปิดจากในแชทกลุ่ม (group) หรือห้องรวม (room)
+          if (ctx && (ctx.type === 'group' || ctx.type === 'room')) {
+            openedFromGroup = true;
+          }
+          if (!openedFromGroup && ctx && isValidDirectUid(ctx.userId)) {
+            activeUserId = ctx.userId.trim();
+          }
+        }
+
+        if (!openedFromGroup && !activeUserId && liff.isLoggedIn()) {
+          // 🔒 บังคับดึง userId ของคนที่กดปุ่มเปิดหน้าจอจริงเป็นหลัก (ไม่เชื่อค่า ?uid= ที่ส่งต่อกันมา)
           const profile = await liff.getProfile();
-          activeUserId = profile.userId;
+          if (profile && isValidDirectUid(profile.userId)) {
+            activeUserId = profile.userId.trim();
+          }
         }
       } catch (e) {}
+
+      if (openedFromGroup) {
+        document.getElementById('branchBadge').innerText = '🔒 ไม่อนุญาตให้ใช้ในแชทกลุ่ม';
+        showResult(
+          '🔒',
+          'ใช้งานได้เฉพาะแชทส่วนตัวเท่านั้น',
+          'กรุณาเปิดเข้าแชทส่วนตัวของ GeGee Ai โดยตรงเพื่อส่งเอกสารครับ (ห้ามใช้งานผ่านแชทกลุ่ม)',
+          false,
+          false
+        );
+        return;
+      }
+
+      if (!activeUserId && isValidDirectUid(urlUid)) {
+        activeUserId = urlUid;
+      }
 
       loadSession(activeUserId);
     };
 
     async function loadSession(uid) {
+      if (!isValidDirectUid(uid)) {
+        document.getElementById('branchBadge').innerText = '🔒 ปิดรับการส่งรูปชั่วคราว';
+        showResult(
+          '🔒',
+          'กรุณาเปิดจากแชทส่วนตัว GeGee Ai',
+          'ไม่พบรหัสผู้ใช้งานส่วนตัว กรุณากดปุ่ม [📸 สแกนส่งเอกสาร] จากในห้องแชทส่วนตัวของบอทเท่านั้นครับ',
+          false,
+          false
+        );
+        return;
+      }
+
       try {
         const info = await callBackend({ action: 'liff_session', userId: uid });
         if (!info.allowed) {
@@ -424,8 +480,8 @@
         autoSelectModeFromHint(info.statusHint);
         document.getElementById('pickerView').classList.remove('hidden');
       } catch (err) {
-        document.getElementById('branchBadge').innerText = '📍 พร้อมรับเอกสาร';
-        document.getElementById('pickerView').classList.remove('hidden');
+        document.getElementById('branchBadge').innerText = '⚠️ เชื่อมต่อระบบไม่สำเร็จ';
+        showResult('⚠️', 'ไม่สามารถตรวจสอบสถานะได้', 'กรุณาปิดหน้าต่างแล้วกดปุ่มสแกนจากในแชทใหม่อีกครั้งครับ', false, false);
       }
     }
 
@@ -535,6 +591,11 @@
     }
 
     async function submitBase64ToServer(dataUrl) {
+      if (!isValidDirectUid(activeUserId)) {
+        showResult('🔒', 'ไม่อนุญาตให้ส่งข้อมูล', 'กรุณากดเปิดสแกนจากแชทส่วนตัวเท่านั้นครับ', false, false);
+        return;
+      }
+
       document.getElementById('pickerView').classList.add('hidden');
       document.getElementById('resultView').classList.add('hidden');
       document.getElementById('scannerView').classList.remove('hidden');
