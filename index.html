@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <title>สแกนส่งเอกสารพนักงาน</title>
+  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Prompt', -apple-system, sans-serif; }
+    body {
+      background: #f4f7fb;
+      color: #1e293b;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+    }
+    .sheet-header {
+      background: linear-gradient(135deg, #0071BA 0%, #005288 100%);
+      color: #fff;
+      padding: 14px 18px;
+      border-bottom-left-radius: 18px;
+      border-bottom-right-radius: 18px;
+      box-shadow: 0 4px 14px rgba(0, 113, 186, 0.22);
+    }
+    .grabber {
+      width: 40px; height: 4px;
+      background: rgba(255,255,255,0.4);
+      border-radius: 99px;
+      margin: 0 auto 8px;
+    }
+    .header-title { font-size: 16px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+    .branch-pill {
+      margin-top: 6px;
+      display: inline-block;
+      background: rgba(255,255,255,0.16);
+      border: 1px solid rgba(255,255,255,0.28);
+      padding: 3px 10px;
+      border-radius: 8px;
+      font-size: 12px;
+      color: #e0f2fe;
+    }
+    .container { padding: 14px; flex: 1; display: flex; flex-direction: column; gap: 12px; }
+
+    .card {
+      background: #ffffff;
+      border-radius: 16px;
+      padding: 16px;
+      box-shadow: 0 2px 10px rgba(15, 23, 42, 0.06);
+    }
+    .hint-banner {
+      background: #e8f4fc;
+      border-left: 4px solid #0071BA;
+      padding: 9px 12px;
+      border-radius: 8px;
+      font-size: 12.5px;
+      color: #005288;
+      font-weight: 600;
+      margin-bottom: 12px;
+    }
+
+    .doc-tabs {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 6px;
+      background: #f1f5f9; padding: 4px; border-radius: 10px; margin-bottom: 12px;
+    }
+    .doc-tab {
+      border: none; background: transparent; padding: 8px 6px; border-radius: 8px;
+      font-size: 12.5px; font-weight: 600; color: #64748b; cursor: pointer; transition: all 0.15s;
+    }
+    .doc-tab.active {
+      background: #0071BA; color: #ffffff; box-shadow: 0 2px 6px rgba(0, 113, 186, 0.25);
+    }
+
+    .sample-guide {
+      background: #f8fafc; border: 2px dashed #0071BA; border-radius: 12px;
+      padding: 12px; margin-bottom: 12px; position: relative;
+    }
+    .sample-id-layout {
+      display: flex; justify-content: space-between; align-items: flex-end; gap: 10px; min-height: 86px;
+    }
+    .sample-lines { flex: 1; display: flex; flex-direction: column; gap: 6px; }
+    .s-badge {
+      display: inline-block; font-size: 10px; background: #e0f2fe; color: #005288;
+      padding: 2px 7px; border-radius: 4px; font-weight: 700; width: fit-content;
+    }
+    .s-line { height: 7px; background: #cbd5e1; border-radius: 4px; }
+    .s-line.w80 { width: 85%; }
+    .s-line.w60 { width: 65%; }
+    .sample-photo {
+      width: 48px; height: 60px; border: 1.5px dashed #0071BA; background: #e8f4fc;
+      border-radius: 6px; display: flex; align-items: center; justify-content: center;
+      font-size: 10px; color: #0071BA; font-weight: 700; text-align: center; flex-shrink: 0;
+    }
+    .guide-tips {
+      display: flex; justify-content: space-between; font-size: 11px; color: #475569;
+      margin-top: 8px; padding-top: 8px; border-top: 1px solid #e2e8f0;
+    }
+    .tip-ok { color: #16a34a; font-weight: 600; }
+    .tip-no { color: #dc2626; font-weight: 600; }
+
+    .camera-stage {
+      position: relative; width: 100%; height: 250px; background: #0f172a;
+      border-radius: 14px; overflow: hidden; display: flex; align-items: center; justify-content: center;
+    }
+    #liveVideo { width: 100%; height: 100%; object-fit: cover; }
+    .overlay-mask {
+      position: absolute; inset: 0; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; pointer-events: none; padding: 14px;
+    }
+    .guide-box {
+      position: relative; width: 88%; max-width: 310px; aspect-ratio: 1.586 / 1;
+      border: 2px solid rgba(56, 189, 248, 0.95); border-radius: 12px;
+      box-shadow: 0 0 0 9999px rgba(15, 23, 42, 0.62);
+    }
+    .guide-box.bookbank-mode { aspect-ratio: 1.42 / 1; border-color: #fbbf24; }
+    .g-corner { position: absolute; width: 22px; height: 22px; border-color: #ffffff; border-style: solid; }
+    .gc-tl { top: -2px; left: -2px; border-width: 4px 0 0 4px; border-top-left-radius: 10px; }
+    .gc-tr { top: -2px; right: -2px; border-width: 4px 4px 0 0; border-top-right-radius: 10px; }
+    .gc-bl { bottom: -2px; left: -2px; border-width: 0 0 4px 4px; border-bottom-left-radius: 10px; }
+    .gc-br { bottom: -2px; right: -2px; border-width: 0 4px 4px 0; border-bottom-right-radius: 10px; }
+
+    .id-inner-guides { position: absolute; inset: 0; }
+    .guide-idnum {
+      position: absolute; top: 10%; left: 26%; right: 8%; height: 16%;
+      border: 1px dashed rgba(255,255,255,0.75); border-radius: 4px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 9.5px; color: #e0f2fe; background: rgba(0, 82, 136, 0.35); font-weight: 600;
+    }
+    .guide-name {
+      position: absolute; top: 32%; left: 10%; right: 34%; height: 26%;
+      border: 1px dashed rgba(255,255,255,0.65); border-radius: 4px;
+      display: flex; align-items: center; padding-left: 6px;
+      font-size: 9.5px; color: #ffffff; background: rgba(15, 23, 42, 0.28);
+    }
+    .guide-photo {
+      position: absolute; bottom: 10%; right: 7%; width: 23%; height: 48%;
+      border: 1.5px dashed rgba(56, 189, 248, 0.95); border-radius: 5px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 9.5px; color: #bae6fd; background: rgba(0, 113, 186, 0.28); text-align: center; font-weight: 600;
+    }
+
+    .book-inner-guides { position: absolute; inset: 0; }
+    .guide-bank-top {
+      position: absolute; top: 12%; left: 8%; right: 8%; height: 20%;
+      border: 1px dashed rgba(254, 240, 138, 0.8); border-radius: 5px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 10px; color: #fef08a; background: rgba(15, 23, 42, 0.35);
+    }
+    .guide-bank-acc {
+      position: absolute; top: 40%; left: 8%; right: 8%; height: 36%;
+      border: 1.5px dashed #fbbf24; border-radius: 6px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 10.5px; color: #ffffff; background: rgba(253, 113, 0, 0.28);
+      font-weight: 700; text-align: center; padding: 0 6px;
+    }
+
+    .camera-caption {
+      position: absolute; bottom: 8px; background: rgba(15, 23, 42, 0.78);
+      color: #ffffff; font-size: 11px; padding: 3px 10px; border-radius: 99px; font-weight: 600;
+    }
+    .cam-controls { display: flex; align-items: center; justify-content: space-between; margin-top: 12px; gap: 10px; }
+    .btn-shutter {
+      flex: 1; background: #0071BA; color: #ffffff; border: none; padding: 13px;
+      border-radius: 12px; font-size: 15px; font-weight: 700; cursor: pointer;
+      box-shadow: 0 4px 12px rgba(0,113,186,0.3);
+    }
+    .btn-back-cam {
+      background: #f1f5f9; color: #475569; border: none; padding: 13px 14px;
+      border-radius: 12px; font-size: 13px; font-weight: 600; cursor: pointer;
+    }
+
+    .btn-grid { display: grid; grid-template-columns: 1fr; gap: 10px; }
+    .upload-btn {
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      width: 100%; padding: 14px; border-radius: 12px; border: none;
+      font-size: 14.5px; font-weight: 700; cursor: pointer; transition: transform 0.12s ease;
+    }
+    .upload-btn:active { transform: scale(0.98); }
+    .btn-camera { background: #0071BA; color: #ffffff; box-shadow: 0 4px 12px rgba(0,113,186,0.28); }
+    .btn-album { background: #fff3e0; color: #c25500; border: 1.5px solid #fd7100; }
+    .native-cam-link {
+      display: block; text-align: center; margin-top: 10px;
+      font-size: 12px; color: #64748b; text-decoration: underline; cursor: pointer;
+    }
+    input[type="file"] { display: none; }
+
+    .hidden { display: none !important; }
+    .scanner-frame {
+      position: relative; width: 100%; height: 185px; background: #0f172a;
+      border-radius: 14px; overflow: hidden; display: flex; align-items: center; justify-content: center;
+      border: 2px solid #0071BA;
+    }
+    .scanner-frame img { max-width: 92%; max-height: 88%; object-fit: contain; border-radius: 8px; opacity: 0.88; }
+    .laser-line {
+      position: absolute; left: 0; right: 0; height: 3px;
+      background: linear-gradient(90deg, transparent, #38bdf8, #ffffff, #38bdf8, transparent);
+      box-shadow: 0 0 16px 4px rgba(56, 189, 248, 0.85);
+      animation: scanMove 2s ease-in-out infinite;
+    }
+    @keyframes scanMove { 0% { top: 8%; } 50% { top: 88%; } 100% { top: 8%; } }
+    .corner { position: absolute; width: 20px; height: 20px; border-color: #38bdf8; border-style: solid; }
+    .c-tl { top: 10px; left: 10px; border-width: 3px 0 0 3px; border-top-left-radius: 6px; }
+    .c-tr { top: 10px; right: 10px; border-width: 3px 3px 0 0; border-top-right-radius: 6px; }
+    .c-bl { bottom: 10px; left: 10px; border-width: 0 0 3px 3px; border-bottom-left-radius: 6px; }
+    .c-br { bottom: 10px; right: 10px; border-width: 0 3px 3px 0; border-bottom-right-radius: 6px; }
+
+    .progress-header {
+      display: flex; justify-content: space-between; align-items: center;
+      margin: 14px 0 6px; font-size: 13px; font-weight: 700; color: #0071BA;
+    }
+    .progress-track { width: 100%; height: 10px; background: #e2e8f0; border-radius: 99px; overflow: hidden; }
+    .progress-fill {
+      height: 100%; width: 0%; background: linear-gradient(90deg, #0071BA, #38bdf8);
+      border-radius: 99px; transition: width 0.25s ease;
+    }
+
+    .step-list { margin-top: 14px; display: flex; flex-direction: column; gap: 8px; }
+    .step-item { display: flex; align-items: center; gap: 10px; font-size: 13px; color: #94a3b8; font-weight: 500; }
+    .step-item.active { color: #0071BA; font-weight: 700; }
+    .step-item.done { color: #16a34a; font-weight: 600; }
+    .step-dot {
+      width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+      font-size: 11px; background: #f1f5f9; color: #94a3b8; flex-shrink: 0;
+    }
+    .step-item.active .step-dot { background: #e0f2fe; color: #0071BA; animation: pulse 1s infinite; }
+    .step-item.done .step-dot { background: #dcfce7; color: #16a34a; }
+    @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.15); } }
+
+    .result-box { text-align: center; padding: 14px 6px; }
+    .result-icon { font-size: 50px; margin-bottom: 8px; }
+    .result-title { font-size: 17px; font-weight: 700; margin-bottom: 6px; color: #0f172a; }
+    .result-sub { font-size: 13px; color: #475569; line-height: 1.5; margin-bottom: 16px; white-space: pre-line; }
+    .btn-close {
+      background: #0071BA; color: #fff; width: 100%; padding: 13px;
+      border: none; border-radius: 12px; font-size: 15px; font-weight: 700; cursor: pointer;
+    }
+    .btn-retry {
+      background: #fd7100; color: #fff; width: 100%; padding: 13px;
+      border: none; border-radius: 12px; font-size: 15px; font-weight: 700; cursor: pointer; margin-bottom: 8px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="sheet-header">
+    <div class="grabber"></div>
+    <div class="header-title">🤖 ระบบสแกนเอกสารพนักงาน AI</div>
+    <div id="branchBadge" class="branch-pill">⏳ กำลังตรวจสอบข้อมูลสาขา...</div>
+  </div>
+
+  <div class="container">
+    <div id="pickerView" class="card hidden">
+      <div id="statusHintBox" class="hint-banner">กรุณาถ่ายรูปบัตรประชาชน หรือ หน้าสมุดบัญชี</div>
+
+      <div class="doc-tabs">
+        <button id="tabIdMain" class="doc-tab active" onclick="setDocMode('idcard')">🪪 บัตรประชาชน</button>
+        <button id="tabBookMain" class="doc-tab" onclick="setDocMode('bookbank')">🏦 สมุดบัญชีธนาคาร</button>
+      </div>
+
+      <div id="sampleIdBox" class="sample-guide">
+        <div class="sample-id-layout">
+          <div class="sample-lines">
+            <span class="s-badge">วางด้านหน้าบัตรให้เต็มกรอบ</span>
+            <div class="s-line w80"></div>
+            <div class="s-line w60"></div>
+            <span style="font-size:10.5px; color:#0071BA; font-weight:600;">เห็นเลข 13 หลัก • ชื่อไทย • วันเกิดชัดเจน</span>
+          </div>
+          <div class="sample-photo">👤<br>รูปถ่าย</div>
+        </div>
+        <div class="guide-tips">
+          <span class="tip-ok">✓ วางแนวนอน แสงสว่างพอดี</span>
+          <span class="tip-no">✕ ห้ามเบลอ / แสงสะท้อนทับเลข</span>
+        </div>
+      </div>
+
+      <div id="sampleBookBox" class="sample-guide hidden" style="border-color:#fd7100;">
+        <div class="sample-lines" style="min-height:86px; justify-content:center;">
+          <span class="s-badge" style="background:#fff3e0; color:#c25500;">เปิดหน้าแรกที่มีเลขบัญชี & ชื่อบัญชี</span>
+          <div class="s-line w60"></div>
+          <div class="s-line w80"></div>
+          <span style="font-size:10.5px; color:#c25500; font-weight:600;">รองรับสมุดบัญชีจริง หรือ ภาพหน้าจอบัญชีแอปธนาคาร</span>
+        </div>
+        <div class="guide-tips">
+          <span class="tip-ok">✓ ชื่อบัญชีตรงกับบัตร ปชช.</span>
+          <span class="tip-no">✕ ไม่ใช้สำเนาที่มีลายมือเขียนทับ</span>
+        </div>
+      </div>
+
+      <div class="btn-grid">
+        <button type="button" class="upload-btn btn-camera" onclick="openLiveCamera()">
+          📸 เปิดกล้องสแกน (มีกรอบเล็งเอกสาร)
+        </button>
+
+        <label class="upload-btn btn-album" for="albumInput">
+          🖼️ เลือกรูปจากอัลบั้มมือถือ
+        </label>
+        <input id="albumInput" type="file" accept="image/*" onchange="handleFileSelect(this)">
+      </div>
+
+      <label class="native-cam-link" for="nativeCameraInput">
+        หากกล้องสดไม่ขึ้น กดที่นี่เพื่อใช้กล้องปกติของมือถือ
+      </label>
+      <input id="nativeCameraInput" type="file" accept="image/*" capture="environment" onchange="handleFileSelect(this)">
+    </div>
+
+    <div id="liveCameraView" class="card hidden">
+      <div class="doc-tabs">
+        <button id="tabIdCam" class="doc-tab active" onclick="setDocMode('idcard')">🪪 กรอบบัตรประชาชน</button>
+        <button id="tabBookCam" class="doc-tab" onclick="setDocMode('bookbank')">🏦 กรอบสมุดบัญชี</button>
+      </div>
+
+      <div class="camera-stage" id="cameraStage">
+        <video id="liveVideo" autoplay playsinline muted></video>
+        <div class="overlay-mask">
+          <div id="guideBox" class="guide-box">
+            <div class="g-corner gc-tl"></div>
+            <div class="g-corner gc-tr"></div>
+            <div class="g-corner gc-bl"></div>
+            <div class="g-corner gc-br"></div>
+
+            <div id="idInnerGuides" class="id-inner-guides">
+              <div class="guide-idnum">เลขบัตรประชาชน 13 หลัก</div>
+              <div class="guide-name">ชื่อ-นามสกุล / วันเกิด</div>
+              <div class="guide-photo">👤<br>รูปบัตร</div>
+            </div>
+
+            <div id="bookInnerGuides" class="book-inner-guides hidden">
+              <div class="guide-bank-top">ชื่อธนาคาร / สาขา</div>
+              <div class="guide-bank-acc">วางให้เห็น เลขที่บัญชี & ชื่อบัญชี ชัดเจน</div>
+            </div>
+          </div>
+          <div id="camCaption" class="camera-caption">จัดบัตรประชาชนให้อยู่ในกรอบ แล้วกดถ่ายภาพ</div>
+        </div>
+      </div>
+
+      <div class="cam-controls">
+        <button type="button" class="btn-back-cam" onclick="closeLiveCamera()">ย้อนกลับ</button>
+        <button type="button" class="btn-shutter" onclick="captureLivePhoto()">📸 กดถ่ายภาพสแกน</button>
+      </div>
+    </div>
+
+    <div id="scannerView" class="card hidden">
+      <div class="scanner-frame">
+        <img id="previewImg" src="" alt="Document Preview">
+        <div class="laser-line"></div>
+        <div class="corner c-tl"></div>
+        <div class="corner c-tr"></div>
+        <div class="corner c-bl"></div>
+        <div class="corner c-br"></div>
+      </div>
+
+      <div class="progress-header">
+        <span id="scanStatusLabel">อัพโหลดรูปภาพ...</span>
+        <span id="percentText">0%</span>
+      </div>
+      <div class="progress-track">
+        <div id="progressFill" class="progress-fill"></div>
+      </div>
+
+      <div class="step-list">
+        <div id="st1" class="step-item"><div class="step-dot">1</div><span>อัพโหลดรูปภาพ</span></div>
+        <div id="st2" class="step-item"><div class="step-dot">2</div><span>GEGEE กำลังอ่านข้อมูล</span></div>
+        <div id="st3" class="step-item"><div class="step-dot">3</div><span>ตรวจสอบอายุ 18 ปีบริบูรณ์ และ ชื่อตรงกัน</span></div>
+        <div id="st4" class="step-item"><div class="step-dot">4</div><span>กำลังบันทึกข้อมูล</span></div>
+      </div>
+    </div>
+
+    <div id="resultView" class="card hidden">
+      <div class="result-box">
+        <div id="resIcon" class="result-icon">✅</div>
+        <div id="resTitle" class="result-title">ประมวลผลเสร็จสมบูรณ์</div>
+        <div id="resSub" class="result-sub">ส่งการ์ดผลลัพธ์เข้าห้องแชท LINE เรียบร้อยแล้ว</div>
+        <button id="retryBtn" class="btn-retry hidden" onclick="resetToPicker()">📸 ถ่ายส่งใบถัดไป / ถ่ายใหม่ทันที</button>
+        <button class="btn-close" onclick="closeDrawer()">ดูผลลัพธ์ในห้องแชท LINE</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const LIFF_ID = "2012520828-w5obRhCf";
+    // 🔗 วางลิงก์ Web App URL (https://script.google.com/macros/s/.../exec) ของคุณตรงนี้
+    const GAS_API_URL = "https://script.google.com/macros/s/AKfycbwzxU3dGAvGIJHu-WFT4REqH9OgD7EMO8pPg_vbEQ3gkUgZciVsyDOG4S25agNKKaCz7A/exec";
+
+    let activeUserId = "";
+    let progressTimer = null;
+    let currentPercent = 0;
+    let mediaStream = null;
+
+    async function callBackend(payload) {
+      const res = await fetch(GAS_API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(payload)
+      });
+      return await res.json();
+    }
+
+    window.onload = async function() {
+      const params = new URLSearchParams(window.location.search);
+      activeUserId = params.get('uid') || '';
+
+      try {
+        await liff.init({ liffId: LIFF_ID });
+        if (!activeUserId && liff.isLoggedIn()) {
+          const profile = await liff.getProfile();
+          activeUserId = profile.userId;
+        }
+      } catch (e) {}
+
+      loadSession(activeUserId);
+    };
+
+    async function loadSession(uid) {
+      try {
+        const info = await callBackend({ action: 'liff_session', userId: uid });
+        if (!info.allowed) {
+          document.getElementById('branchBadge').innerText = '🔒 ปิดรับการส่งรูปชั่วคราว';
+          showResult('🔒', 'กรุณาเริ่มจากเมนูหลัก', info.statusHint, false, false);
+          return;
+        }
+        document.getElementById('branchBadge').innerText = '📍 ' + info.branchDisplay;
+        document.getElementById('statusHintBox').innerText = info.statusHint;
+        autoSelectModeFromHint(info.statusHint);
+        document.getElementById('pickerView').classList.remove('hidden');
+      } catch (err) {
+        document.getElementById('branchBadge').innerText = '📍 พร้อมรับเอกสาร';
+        document.getElementById('pickerView').classList.remove('hidden');
+      }
+    }
+
+    function autoSelectModeFromHint(hint) {
+      if (!hint) return;
+      if (hint.indexOf('หน้าสมุดบัญชี') !== -1 && hint.indexOf('ส่งบัตร ปชช. แล้ว') !== -1) {
+        setDocMode('bookbank');
+      } else {
+        setDocMode('idcard');
+      }
+    }
+
+    function setDocMode(mode) {
+      const isId = (mode === 'idcard');
+      document.getElementById('tabIdMain').className = 'doc-tab' + (isId ? ' active' : '');
+      document.getElementById('tabBookMain').className = 'doc-tab' + (!isId ? ' active' : '');
+      document.getElementById('tabIdCam').className = 'doc-tab' + (isId ? ' active' : '');
+      document.getElementById('tabBookCam').className = 'doc-tab' + (!isId ? ' active' : '');
+
+      document.getElementById('sampleIdBox').classList.toggle('hidden', !isId);
+      document.getElementById('sampleBookBox').classList.toggle('hidden', isId);
+
+      document.getElementById('guideBox').classList.toggle('bookbank-mode', !isId);
+      document.getElementById('idInnerGuides').classList.toggle('hidden', !isId);
+      document.getElementById('bookInnerGuides').classList.toggle('hidden', isId);
+      document.getElementById('camCaption').innerText = isId
+        ? 'จัดบัตรประชาชนให้อยู่ในกรอบ แล้วกดถ่ายภาพ'
+        : 'จัดหน้าสมุดบัญชีให้อยู่ในกรอบ แล้วกดถ่ายภาพ';
+    }
+
+    async function openLiveCamera() {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        document.getElementById('nativeCameraInput').click();
+        return;
+      }
+      try {
+        stopLiveCamera();
+        mediaStream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } },
+          audio: false
+        });
+        document.getElementById('liveVideo').srcObject = mediaStream;
+        document.getElementById('pickerView').classList.add('hidden');
+        document.getElementById('liveCameraView').classList.remove('hidden');
+      } catch (err) {
+        document.getElementById('nativeCameraInput').click();
+      }
+    }
+
+    function stopLiveCamera() {
+      if (mediaStream) {
+        mediaStream.getTracks().forEach(t => t.stop());
+        mediaStream = null;
+      }
+    }
+
+    function closeLiveCamera() {
+      stopLiveCamera();
+      document.getElementById('liveCameraView').classList.add('hidden');
+      document.getElementById('pickerView').classList.remove('hidden');
+    }
+
+    function captureLivePhoto() {
+      const video = document.getElementById('liveVideo');
+      if (!video.videoWidth || !video.videoHeight) return;
+
+      const stageRect = document.getElementById('cameraStage').getBoundingClientRect();
+      const boxRect = document.getElementById('guideBox').getBoundingClientRect();
+
+      const vw = video.videoWidth, vh = video.videoHeight;
+      const scale = Math.max(stageRect.width / vw, stageRect.height / vh);
+      const offsetX = ((vw * scale) - stageRect.width) / 2;
+      const offsetY = ((vh * scale) - stageRect.height) / 2;
+
+      let sx = ((boxRect.left - stageRect.left) + offsetX) / scale;
+      let sy = ((boxRect.top - stageRect.top) + offsetY) / scale;
+      let sw = boxRect.width / scale;
+      let sh = boxRect.height / scale;
+
+      const padX = sw * 0.14, padY = sh * 0.14;
+      sx = Math.max(0, sx - padX);
+      sy = Math.max(0, sy - padY);
+      sw = Math.min(vw - sx, sw + padX * 2);
+      sh = Math.min(vh - sy, sh + padY * 2);
+
+      let outW = Math.round(sw), outH = Math.round(sh);
+      if (outW > 1600) { outH = Math.round(outH * 1600 / outW); outW = 1600; }
+
+      const canvas = document.createElement('canvas');
+      canvas.width = outW; canvas.height = outH;
+      canvas.getContext('2d').drawImage(video, sx, sy, sw, sh, 0, 0, outW, outH);
+
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.88);
+      stopLiveCamera();
+      document.getElementById('liveCameraView').classList.add('hidden');
+      submitBase64ToServer(dataUrl);
+    }
+
+    function handleFileSelect(input) {
+      if (!input.files || !input.files[0]) return;
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        compressImage(e.target.result, 1600, 0.86, submitBase64ToServer);
+      };
+      reader.readAsDataURL(input.files[0]);
+      input.value = '';
+    }
+
+    async function submitBase64ToServer(dataUrl) {
+      document.getElementById('pickerView').classList.add('hidden');
+      document.getElementById('resultView').classList.add('hidden');
+      document.getElementById('scannerView').classList.remove('hidden');
+      document.getElementById('previewImg').src = dataUrl;
+
+      startProgressSimulation();
+
+      try {
+        const res = await callBackend({
+          action: 'liff_upload',
+          userId: activeUserId,
+          base64: dataUrl.split(',')[1],
+          mimeType: 'image/jpeg'
+        });
+        onUploadComplete(res);
+      } catch (err) {
+        onUploadError();
+      }
+    }
+
+    function compressImage(dataUrl, maxDim, quality, callback) {
+      const img = new Image();
+      img.onload = function() {
+        let w = img.width, h = img.height;
+        if (w > maxDim || h > maxDim) {
+          if (w > h) { h = Math.round(h * maxDim / w); w = maxDim; }
+          else { w = Math.round(w * maxDim / h); h = maxDim; }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        callback(canvas.toDataURL('image/jpeg', quality));
+      };
+      img.src = dataUrl;
+    }
+
+    function startProgressSimulation() {
+      currentPercent = 0;
+      updateStepUI(0);
+      if (progressTimer) clearInterval(progressTimer);
+      progressTimer = setInterval(function() {
+        if (currentPercent < 25) currentPercent += 4;
+        else if (currentPercent < 60) currentPercent += 2;
+        else if (currentPercent < 88) currentPercent += 1;
+        updateStepUI(currentPercent);
+      }, 160);
+    }
+
+    function updateStepUI(pct) {
+      document.getElementById('percentText').innerText = pct + '%';
+      document.getElementById('progressFill').style.width = pct + '%';
+
+      const labels = [
+        { min: 0, text: 'อัพโหลดรูปภาพ...' },
+        { min: 25, text: 'GEGEE กำลังอ่านข้อมูล...' },
+        { min: 60, text: 'ตรวจสอบอายุ 18 ปีบริบูรณ์ และ ชื่อตรงกัน...' },
+        { min: 82, text: 'กำลังบันทึกข้อมูล...' },
+        { min: 100, text: 'บันทึกข้อมูลเสร็จสมบูรณ์!' }
+      ];
+      for (let i = labels.length - 1; i >= 0; i--) {
+        if (pct >= labels[i].min) {
+          document.getElementById('scanStatusLabel').innerText = labels[i].text;
+          break;
+        }
+      }
+
+      setStepState('st1', pct >= 25 ? 'done' : 'active', '1');
+      setStepState('st2', pct >= 60 ? 'done' : (pct >= 25 ? 'active' : ''), '2');
+      setStepState('st3', pct >= 82 ? 'done' : (pct >= 60 ? 'active' : ''), '3');
+      setStepState('st4', pct >= 100 ? 'done' : (pct >= 82 ? 'active' : ''), '4');
+    }
+
+    function setStepState(id, state, num) {
+      const el = document.getElementById(id);
+      el.className = 'step-item' + (state ? ' ' + state : '');
+      el.querySelector('.step-dot').innerText = state === 'done' ? '✓' : num;
+    }
+
+    function onUploadComplete(res) {
+      if (progressTimer) clearInterval(progressTimer);
+      updateStepUI(100);
+
+      setTimeout(function() {
+        if (!res || !res.ok) {
+          showResult('⚠️', (res && res.title) || 'เกิดข้อผิดพลาด', (res && res.subtitle) || 'กรุณาลองใหม่อีกครั้ง', true, false);
+          return;
+        }
+        const iconMap = {
+          'MATCHED': '🎉', 'PENDING': '💾', 'MISMATCH': '⚠️',
+          'UNREADABLE': '🔍', 'UNDER18': '❌', 'DUPLICATE': '🔄', 'LOCKED': '🔒'
+        };
+        const icon = iconMap[res.statusType] || '✅';
+        const canSendMore = ['PENDING', 'UNREADABLE', 'MISMATCH'].includes(res.statusType);
+        const autoClose = ['MATCHED', 'UNDER18', 'DUPLICATE'].includes(res.statusType);
+        showResult(icon, res.title, res.subtitle, canSendMore, autoClose);
+      }, 450);
+    }
+
+    function onUploadError() {
+      if (progressTimer) clearInterval(progressTimer);
+      showResult('⚠️', 'การเชื่อมต่อขัดข้อง', 'กรุณากดถ่ายหรือเลือกรูปใหม่อีกครั้งครับ', true, false);
+    }
+
+    function showResult(icon, title, sub, allowRetryButton, autoClose) {
+      stopLiveCamera();
+      document.getElementById('liveCameraView').classList.add('hidden');
+      document.getElementById('scannerView').classList.add('hidden');
+      document.getElementById('pickerView').classList.add('hidden');
+      document.getElementById('resultView').classList.remove('hidden');
+
+      document.getElementById('resIcon').innerText = icon;
+      document.getElementById('resTitle').innerText = title;
+      document.getElementById('resSub').innerText = sub;
+
+      const retryBtn = document.getElementById('retryBtn');
+      if (allowRetryButton) {
+        retryBtn.classList.remove('hidden');
+        retryBtn.innerText = icon === '💾' ? '📸 ส่งเอกสารใบที่ 2 ต่อทันที' : '📸 ถ่ายส่งใหม่อีกครั้ง';
+      } else {
+        retryBtn.classList.add('hidden');
+      }
+
+      if (autoClose) {
+        setTimeout(closeDrawer, 1000);
+      }
+    }
+
+    async function resetToPicker() {
+      stopLiveCamera();
+      document.getElementById('resultView').classList.add('hidden');
+      document.getElementById('pickerView').classList.remove('hidden');
+      try {
+        const info = await callBackend({ action: 'liff_session', userId: activeUserId });
+        if (info && info.allowed) {
+          document.getElementById('statusHintBox').innerText = info.statusHint;
+          autoSelectModeFromHint(info.statusHint);
+        }
+      } catch (e) {}
+    }
+
+    function closeDrawer() {
+      stopLiveCamera();
+      if (window.liff && liff.isInClient()) {
+        liff.closeWindow();
+      } else {
+        window.close();
+      }
+    }
+  </script>
+</body>
+</html>
