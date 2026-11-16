@@ -280,7 +280,7 @@
       </div>
     </div>
 
-    <!-- หน้าสแกนเลเซอร์ -->
+    <!-- หน้าสแกนเลเซอร์ (แยกข้อความสถานะ 4 ข้อตามโหมดเอกสาร vs รูปพนักงานอัตโนมัติ) -->
     <div id="scannerView" class="card hidden">
       <div class="scanner-frame">
         <img id="previewImg" src="" alt="Document Preview">
@@ -300,10 +300,10 @@
       </div>
 
       <div class="step-list">
-        <div id="st1" class="step-item"><div class="step-dot">1</div><span>อัพโหลดรูปภาพ</span></div>
-        <div id="st2" class="step-item"><div class="step-dot">2</div><span>GEGEE กำลังอ่านข้อมูล</span></div>
-        <div id="st3" class="step-item"><div class="step-dot">3</div><span>ตรวจสอบอายุ 18 ปีบริบูรณ์ และ ชื่อตรงกัน</span></div>
-        <div id="st4" class="step-item"><div class="step-dot">4</div><span>กำลังบันทึกข้อมูล</span></div>
+        <div id="st1" class="step-item"><div class="step-dot">1</div><span id="st1Text">อัพโหลดรูปภาพ</span></div>
+        <div id="st2" class="step-item"><div class="step-dot">2</div><span id="st2Text">GEGEE กำลังอ่านข้อมูล</span></div>
+        <div id="st3" class="step-item"><div class="step-dot">3</div><span id="st3Text">ตรวจสอบอายุ 18 ปีบริบูรณ์ และ ชื่อตรงกัน</span></div>
+        <div id="st4" class="step-item"><div class="step-dot">4</div><span id="st4Text">กำลังบันทึกข้อมูล</span></div>
       </div>
     </div>
 
@@ -329,7 +329,7 @@
     let mediaStream = null;
     let currentDocMode = "idcard";
     let cameraFacing = "environment";
-    let completedModes = []; // รายการที่ส่งสำเร็จแล้ว
+    let completedModes = [];
 
     function isValidDirectUid(uid) {
       return typeof uid === 'string' && /^U[0-9a-fA-F]{32}$/.test(uid.trim());
@@ -400,7 +400,6 @@
           if (info.recommendedMode && !completedModes.includes(info.recommendedMode)) {
             setDocMode(info.recommendedMode);
           } else {
-            // หาโหมดแรกที่ยังไม่สำเร็จ
             const firstAvailable = ['idcard', 'bookbank', 'portrait'].find(m => !completedModes.includes(m)) || 'idcard';
             setDocMode(firstAvailable);
           }
@@ -412,7 +411,6 @@
       }
     }
 
-    // อัปเดตสถานะปุ่ม: หากหัวข้อใดสำเร็จแล้วให้ disable ทันที (ข้อ 3)
     function updateTabsState() {
       const isIdDone = completedModes.includes('idcard');
       const isBookDone = completedModes.includes('bookbank');
@@ -428,7 +426,7 @@
     }
 
     function setDocMode(mode) {
-      if (completedModes.includes(mode)) return; // ห้ามเลือกอันที่ทำเสร็จแล้ว
+      if (completedModes.includes(mode)) return;
       currentDocMode = mode;
       const isId = (mode === 'idcard');
       const isBook = (mode === 'bookbank');
@@ -465,6 +463,19 @@
       else document.getElementById('camCaption').innerText = 'จัดศีรษะและไหล่ให้อยู่ในโครงร่าง (บุคคลเดี่ยวหน้าตรง)';
 
       document.getElementById('nativeCameraInput').setAttribute('capture', isPortrait ? 'user' : 'environment');
+    }
+
+    // สลับข้อความเช็กลิสต์ 4 ข้อให้ตรงกับโหมดรูปพนักงาน vs โหมดเอกสาร
+    function applyScannerStepTexts(mode) {
+      const isPortrait = (mode === 'portrait');
+      document.getElementById('st1Text').innerText = 'อัพโหลดรูปภาพ';
+      document.getElementById('st2Text').innerText = isPortrait
+        ? 'GEGEE กำลังตรวจสอบภาพใบหน้า'
+        : 'GEGEE กำลังอ่านข้อมูล';
+      document.getElementById('st3Text').innerText = isPortrait
+        ? 'ตรวจสอบภาพเดี่ยวหน้าตรงและแสงสว่าง'
+        : 'ตรวจสอบอายุ 18 ปีบริบูรณ์ และ ชื่อตรงกัน';
+      document.getElementById('st4Text').innerText = 'กำลังบันทึกข้อมูล';
     }
 
     async function startStreamWithFacing(facing) {
@@ -570,6 +581,8 @@
         return;
       }
 
+      applyScannerStepTexts(currentDocMode);
+
       document.getElementById('pickerView').classList.add('hidden');
       document.getElementById('resultView').classList.add('hidden');
       document.getElementById('scannerView').classList.remove('hidden');
@@ -623,13 +636,23 @@
       document.getElementById('percentText').innerText = pct + '%';
       document.getElementById('progressFill').style.width = pct + '%';
 
-      const labels = [
-        { min: 0, text: 'อัพโหลดรูปภาพ...' },
-        { min: 25, text: 'GEGEE กำลังอ่านข้อมูล...' },
-        { min: 60, text: 'ตรวจสอบอายุ 18 ปีบริบูรณ์ และ ชื่อตรงกัน...' },
-        { min: 82, text: 'กำลังบันทึกข้อมูล...' },
-        { min: 100, text: 'บันทึกข้อมูลเสร็จสมบูรณ์!' }
-      ];
+      const isPortrait = (currentDocMode === 'portrait');
+      const labels = isPortrait
+        ? [
+            { min: 0, text: 'อัพโหลดรูปภาพ...' },
+            { min: 25, text: 'GEGEE กำลังตรวจสอบภาพใบหน้า...' },
+            { min: 60, text: 'ตรวจสอบภาพเดี่ยวหน้าตรงและแสงสว่าง...' },
+            { min: 82, text: 'กำลังบันทึกข้อมูล...' },
+            { min: 100, text: 'บันทึกรูปพนักงานเสร็จสมบูรณ์!' }
+          ]
+        : [
+            { min: 0, text: 'อัพโหลดรูปภาพ...' },
+            { min: 25, text: 'GEGEE กำลังอ่านข้อมูล...' },
+            { min: 60, text: 'ตรวจสอบอายุ 18 ปีบริบูรณ์ และ ชื่อตรงกัน...' },
+            { min: 82, text: 'กำลังบันทึกข้อมูล...' },
+            { min: 100, text: 'บันทึกข้อมูลเสร็จสมบูรณ์!' }
+          ];
+
       for (let i = labels.length - 1; i >= 0; i--) {
         if (pct >= labels[i].min) {
           document.getElementById('scanStatusLabel').innerText = labels[i].text;
