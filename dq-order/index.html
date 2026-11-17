@@ -40,9 +40,11 @@
           <p id="headerSubtitle" class="text-[11px] text-[#b2e0fb] leading-tight">กำลังเชื่อมต่อบัญชี LINE...</p>
         </div>
       </div>
-      <div id="branchBadgeTop" class="hidden bg-white/15 border border-[#b2e0fb]/50 text-white text-xs font-semibold px-2.5 py-1 rounded-lg">
+
+      <!-- ปุ่มแสดงรหัสสาขา (กดเพื่อเปลี่ยนสาขาได้ทันทีกรณีดูแลมากกว่า 1 สาขา) -->
+      <button id="branchBadgeTop" type="button" onclick="onTopBranchClick()" class="hidden bg-white/15 border border-[#b2e0fb]/60 text-white text-xs font-semibold px-2.5 py-1 rounded-lg active:scale-95 transition">
         DQ----
-      </div>
+      </button>
     </div>
   </header>
 
@@ -69,12 +71,31 @@
     </div>
   </div>
 
+  <!-- VIEW 0: Branch Picker Screen (แสดงเฉพาะผู้ที่ดูแลมากกว่า 1 สาขาในคอลัมน์ E) -->
+  <main id="branchPickerView" class="hidden max-w-lg mx-auto px-4 pt-5 space-y-3.5">
+    <div class="bg-white border border-[#b2e0fb] rounded-2xl p-4 shadow-sm">
+      <div class="flex items-center justify-between">
+        <div>
+          <span class="inline-block text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#f0f8ff] text-[#0071BA] border border-[#b2e0fb]" id="pickerRoleBadge">Multi-Branch</span>
+          <h2 class="text-base font-bold text-[#005288] mt-1">กรุณาเลือกสาขาที่ต้องการตรวจรับ</h2>
+          <p class="text-xs text-slate-500 mt-0.5">บัญชีของคุณมีสิทธิ์ดูแลมากกว่า 1 สาขา</p>
+        </div>
+        <div class="w-10 h-10 rounded-2xl bg-[#f0f8ff] border border-[#b2e0fb] flex items-center justify-center text-lg">🏪</div>
+      </div>
+    </div>
+
+    <div id="branchPickerGrid" class="space-y-2.5"></div>
+  </main>
+
   <!-- VIEW 1: Rounds List -->
   <main id="roundsView" class="hidden max-w-lg mx-auto px-4 pt-4 space-y-3.5">
     <div class="bg-white border border-[#b2e0fb] rounded-2xl p-3.5 shadow-sm space-y-3">
       <div class="grid grid-cols-2 gap-2.5">
         <div>
-          <label class="block text-[11px] font-semibold text-[#005288] mb-1">สาขา (Branch)</label>
+          <div class="flex items-center justify-between mb-1">
+            <label class="text-[11px] font-semibold text-[#005288]">สาขา (Branch)</label>
+            <button id="btnSwitchBranchInline" type="button" onclick="openBranchPicker()" class="hidden text-[10px] font-bold text-[#0071BA] underline">สลับสาขา</button>
+          </div>
           <select id="branchSelect" onchange="onFilterChange()" class="w-full bg-[#f4faff] border border-[#b2e0fb] rounded-xl px-3 py-2 text-xs font-semibold text-[#005288] focus:outline-none focus:border-[#0071BA]"></select>
         </div>
         <div>
@@ -237,6 +258,7 @@
     const state = {
       user: null,
       branches: [],
+      branchMeta: {},
       months: [],
       rounds: [],
       selectedBranch: '',
@@ -262,7 +284,7 @@
       try {
         json = JSON.parse(rawText);
       } catch (parseErr) {
-        throw new Error('สคริปต์ฝั่ง Google Apps Script ยังไม่อัปเดตเป็นแบบ JSON API (กรุณาวาง Code.gs ตัวล่าสุดแล้วกด Deploy -> Manage deployments -> ดินสอ -> New version)');
+        throw new Error('สคริปต์ฝั่ง Google Apps Script ยังไม่อัปเดตเป็นเวอร์ชันล่าสุด (กรุณากด Deploy -> Manage deployments -> ดินสอ -> New version)');
       }
       if (!json.ok) {
         throw new Error(json.error || 'เกิดข้อผิดพลาดจาก Google Apps Script');
@@ -291,7 +313,7 @@
           return;
         }
 
-        document.getElementById('loadingStepTitle').textContent = 'กำลังโหลดข้อมูลออเดอร์สาขา...';
+        document.getElementById('loadingStepTitle').textContent = 'กำลังตรวจสอบสิทธิ์และโหลดออเดอร์...';
         const profile = await liff.getProfile();
         const res = await callGasApi('getInitialData', {
           lineUserId: profile.userId,
@@ -310,10 +332,14 @@
 
         state.user = res.user;
         state.branches = res.branches || [];
+        state.branchMeta = res.branchMeta || {};
         state.months = res.months || [];
         state.rounds = res.rounds || [];
 
-        document.getElementById('headerSubtitle').textContent = `${state.user.name} (${state.user.role})`;
+        const roleDisplay = state.user.levelLabel || state.user.role;
+        document.getElementById('headerSubtitle').textContent = `${state.user.name} (${roleDisplay})`;
+        document.getElementById('pickerRoleBadge').textContent = `${state.user.name} • ${roleDisplay}`;
+
         populateSelectors();
 
         const params = new URLSearchParams(window.location.search);
@@ -321,33 +347,108 @@
         const dlType = params.get('type') || '';
         const dlDate = params.get('date') || '';
 
-        if (dlBranch && state.branches.includes(dlBranch)) {
-          state.selectedBranch = dlBranch;
-          document.getElementById('branchSelect').value = dlBranch;
-          updateTopBranchBadge();
-        }
         if (dlType === 'COLD' || dlType === 'DRY') {
           state.selectedCategory = dlType;
         }
-
         renderCategoryTabs();
-        renderRoundsList();
-        document.getElementById('roundsView').classList.remove('hidden');
 
-        if (dlBranch && dlDate) {
-          const targetKey = `${dlBranch}|${state.selectedCategory}|${dlDate}`;
-          const found = state.rounds.find(r => r.roundKey === targetKey);
-          if (found) openRoundDetail(found.roundKey);
+        // กรณีเปิดจากปุ่ม Deep Link ในการ์ดแจ้งเตือน LINE ที่ระบุสาขามาชัดเจนแล้ว
+        if (dlBranch && state.branches.includes(dlBranch)) {
+          chooseBranchFromPicker(dlBranch, false);
+          if (dlDate) {
+            const targetKey = `${dlBranch}|${state.selectedCategory}|${dlDate}`;
+            const found = state.rounds.find(r => r.roundKey === targetKey);
+            if (found) openRoundDetail(found.roundKey);
+          }
+          return;
+        }
+
+        // กรณีดูแลมากกว่า 1 สาขาในคอลัมน์ E ให้แสดงหน้ากดเลือกสาขาก่อนเสมอ
+        if (state.branches.length > 1) {
+          openBranchPicker();
+        } else {
+          chooseBranchFromPicker(state.branches[0] || '', false);
         }
       } catch (err) {
         showFatalScreen('เชื่อมต่อไม่สำเร็จ', err && err.message ? err.message : String(err));
       }
     }
 
+    function openBranchPicker() {
+      document.getElementById('roundsView').classList.add('hidden');
+      document.getElementById('detailView').classList.add('hidden');
+      document.getElementById('bottomActionBar').classList.add('hidden');
+      document.getElementById('btnBack').classList.add('hidden');
+      document.getElementById('branchBadgeTop').classList.add('hidden');
+
+      renderBranchPickerCards();
+      document.getElementById('branchPickerView').classList.remove('hidden');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function renderBranchPickerCards() {
+      const grid = document.getElementById('branchPickerGrid');
+      grid.innerHTML = state.branches.map(b => {
+        const branchName = state.branchMeta[b] || '';
+        const branchRounds = state.rounds.filter(r => r.branch === b);
+        const pendingCount = branchRounds.filter(r => r.status !== 'RECEIVED').length;
+        const lateCount = branchRounds.filter(r => r.status === 'LATE').length;
+
+        let badgeHtml = `<span class="text-[11px] font-semibold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">ครบทุกรอบ</span>`;
+        if (branchRounds.length === 0) {
+          badgeHtml = `<span class="text-[11px] font-medium px-2.5 py-1 rounded-full bg-slate-100 text-slate-500">ยังไม่มีออเดอร์</span>`;
+        } else if (lateCount > 0) {
+          badgeHtml = `<span class="text-[11px] font-bold px-2.5 py-1 rounded-full bg-red-50 text-[#D32F2F] border border-red-200">ค้างรับ ${pendingCount} รอบ</span>`;
+        } else if (pendingCount > 0) {
+          badgeHtml = `<span class="text-[11px] font-bold px-2.5 py-1 rounded-full bg-[#f0f8ff] text-[#0071BA] border border-[#b2e0fb]">รอรับ ${pendingCount} รอบ</span>`;
+        }
+
+        return `
+          <button type="button" onclick="chooseBranchFromPicker('${b}', true)" class="w-full text-left bg-white border-2 border-[#b2e0fb] hover:border-[#0071BA] rounded-2xl p-4 shadow-xs active:scale-[0.99] transition flex items-center justify-between gap-3">
+            <div>
+              <div class="flex items-center gap-2">
+                <span class="text-base font-bold text-[#005288]">DQ${escapeHtml(b)}</span>
+                ${branchName ? `<span class="text-xs font-medium text-slate-600">• ${escapeHtml(branchName)}</span>` : ''}
+              </div>
+              <div class="text-[11px] text-[#0071BA] mt-1">แตะเพื่อเข้าดูรอบส่งของเย็น / ของแห้ง ›</div>
+            </div>
+            <div class="shrink-0">${badgeHtml}</div>
+          </button>`;
+      }).join('');
+    }
+
+    function chooseBranchFromPicker(branchCode, showToastMsg) {
+      state.selectedBranch = branchCode;
+      const bSel = document.getElementById('branchSelect');
+      if (bSel) bSel.value = branchCode;
+
+      document.getElementById('branchPickerView').classList.add('hidden');
+      document.getElementById('roundsView').classList.remove('hidden');
+
+      updateTopBranchBadge();
+      renderRoundsList();
+      if (showToastMsg && branchCode) {
+        showToast(`เลือกสาขา DQ${branchCode} แล้ว`);
+      }
+    }
+
+    function onTopBranchClick() {
+      if (state.branches.length > 1) {
+        openBranchPicker();
+      }
+    }
+
     function populateSelectors() {
       const bSel = document.getElementById('branchSelect');
-      bSel.innerHTML = state.branches.map(b => `<option value="${b}">DQ${b}</option>`).join('');
+      bSel.innerHTML = state.branches.map(b => {
+        const label = state.branchMeta[b] ? `DQ${b} (${state.branchMeta[b]})` : `DQ${b}`;
+        return `<option value="${b}">${escapeHtml(label)}</option>`;
+      }).join('');
       state.selectedBranch = state.branches[0] || '';
+
+      if (state.branches.length > 1) {
+        document.getElementById('btnSwitchBranchInline').classList.remove('hidden');
+      }
 
       const mSel = document.getElementById('monthSelect');
       if (state.months.length === 0) {
@@ -356,7 +457,6 @@
       }
       mSel.innerHTML = state.months.map(m => `<option value="${m}">${formatThaiMonthLabel(m)}</option>`).join('');
       state.selectedMonth = state.months[0] || '';
-      updateTopBranchBadge();
     }
 
     function formatThaiMonthLabel(yyyyMm) {
@@ -369,7 +469,7 @@
     function updateTopBranchBadge() {
       const badge = document.getElementById('branchBadgeTop');
       if (state.selectedBranch) {
-        badge.textContent = `DQ${state.selectedBranch}`;
+        badge.textContent = state.branches.length > 1 ? `DQ${state.selectedBranch} ▾` : `DQ${state.selectedBranch}`;
         badge.classList.remove('hidden');
       }
     }
@@ -417,7 +517,7 @@
       if (filtered.length === 0) {
         container.innerHTML = `
           <div class="bg-white border border-[#b2e0fb] rounded-2xl p-8 text-center">
-            <p class="text-xs font-semibold text-[#005288]">ไม่มีรอบส่งสินค้าในเดือนและหมวดที่เลือก</p>
+            <p class="text-xs font-semibold text-[#005288]">ไม่มีรอบส่งสินค้าในเดือนและหมวดที่เลือก (สาขา DQ${escapeHtml(state.selectedBranch)})</p>
           </div>`;
         return;
       }
@@ -496,10 +596,12 @@
       renderDetailItems();
       updatePhotoStatusUI();
 
+      document.getElementById('branchPickerView').classList.add('hidden');
       document.getElementById('roundsView').classList.add('hidden');
       document.getElementById('detailView').classList.remove('hidden');
       document.getElementById('bottomActionBar').classList.remove('hidden');
       document.getElementById('btnBack').classList.remove('hidden');
+      updateTopBranchBadge();
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
