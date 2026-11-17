@@ -1,0 +1,799 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <title>DQ ตรวจรับสินค้า</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { font-family: 'Prompt', sans-serif; -webkit-tap-highlight-color: transparent; }
+    body { background-color: #f2f9fe; color: #0f172a; }
+    .dq-gradient { background: linear-gradient(135deg, #005288 0%, #0071BA 100%); }
+    @keyframes scanBeam {
+      0% { top: 6%; opacity: 0.9; }
+      50% { top: 88%; opacity: 1; }
+      100% { top: 6%; opacity: 0.9; }
+    }
+    .scan-line {
+      position: absolute; left: 0; right: 0; height: 3px;
+      background: #fd7100; box-shadow: 0 0 12px #fd7100;
+      animation: scanBeam 1.8s infinite ease-in-out;
+    }
+  </style>
+</head>
+<body class="min-h-screen pb-28">
+
+  <!-- Header -->
+  <header class="dq-gradient text-white sticky top-0 z-30 shadow-md">
+    <div class="max-w-lg mx-auto px-4 py-3 flex items-center justify-between">
+      <div class="flex items-center gap-2.5">
+        <button id="btnBack" onclick="goBackView()" class="hidden px-2.5 py-1 rounded-lg bg-white/15 text-xs font-medium active:scale-95 transition">
+          ‹ รอบส่ง
+        </button>
+        <div class="bg-[#D32F2F] text-white font-bold text-xs px-2.5 py-1 rounded-full border border-white/80 tracking-wide shadow-sm">
+          DQ
+        </div>
+        <div>
+          <h1 class="text-sm font-bold leading-tight">ตรวจสอบออเดอร์ / รับสินค้า</h1>
+          <p id="headerSubtitle" class="text-[11px] text-[#b2e0fb] leading-tight">กำลังเชื่อมต่อบัญชี LINE...</p>
+        </div>
+      </div>
+      <div id="branchBadgeTop" class="hidden bg-white/15 border border-[#b2e0fb]/50 text-white text-xs font-semibold px-2.5 py-1 rounded-lg">
+        DQ----
+      </div>
+    </div>
+  </header>
+
+  <!-- Loading Screen -->
+  <div id="loadingScreen" class="max-w-lg mx-auto px-4 py-14 text-center">
+    <div class="w-12 h-12 rounded-full border-4 border-[#b2e0fb] border-t-[#0071BA] animate-spin mx-auto mb-4"></div>
+    <p id="loadingStepTitle" class="text-sm font-semibold text-[#005288]">กำลังเชื่อมต่อ LINE LIFF...</p>
+    <p id="loadingStepSub" class="text-xs text-slate-500 mt-1">กรุณารอสักครู่</p>
+  </div>
+
+  <!-- Unauthorized Screen -->
+  <div id="unauthScreen" class="hidden max-w-lg mx-auto px-4 py-10">
+    <div class="bg-white border-2 border-[#D32F2F] rounded-2xl p-5 shadow-sm text-center">
+      <div class="w-12 h-12 rounded-full bg-red-50 text-[#D32F2F] flex items-center justify-center text-2xl mx-auto mb-3">⚠️</div>
+      <h2 class="text-base font-bold text-[#005288]">ยังไม่พบสิทธิ์เข้าใช้งานสาขา</h2>
+      <p id="unauthMessage" class="text-xs text-slate-600 mt-1.5 leading-relaxed"></p>
+      <div class="mt-4 bg-slate-50 border border-slate-200 rounded-xl p-3 text-left">
+        <div class="text-[11px] text-slate-400">รหัส LINE User ID ของคุณ (คัดลอกส่งให้แอดมิน):</div>
+        <div class="flex items-center justify-between gap-2 mt-1">
+          <code id="myLineUidText" class="text-xs font-semibold text-[#005288] break-all">-</code>
+          <button onclick="copyMyUid()" class="shrink-0 bg-[#0071BA] text-white text-xs px-3 py-1.5 rounded-lg font-medium">คัดลอก</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- VIEW 1: Rounds List -->
+  <main id="roundsView" class="hidden max-w-lg mx-auto px-4 pt-4 space-y-3.5">
+    <div class="bg-white border border-[#b2e0fb] rounded-2xl p-3.5 shadow-sm space-y-3">
+      <div class="grid grid-cols-2 gap-2.5">
+        <div>
+          <label class="block text-[11px] font-semibold text-[#005288] mb-1">สาขา (Branch)</label>
+          <select id="branchSelect" onchange="onFilterChange()" class="w-full bg-[#f4faff] border border-[#b2e0fb] rounded-xl px-3 py-2 text-xs font-semibold text-[#005288] focus:outline-none focus:border-[#0071BA]"></select>
+        </div>
+        <div>
+          <label class="block text-[11px] font-semibold text-[#005288] mb-1">รอบเดือน</label>
+          <select id="monthSelect" onchange="onFilterChange()" class="w-full bg-[#f4faff] border border-[#b2e0fb] rounded-xl px-3 py-2 text-xs font-semibold text-[#005288] focus:outline-none focus:border-[#0071BA]"></select>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-2 pt-0.5">
+        <button id="tabCold" onclick="setCategory('COLD')" class="py-2.5 px-3 rounded-xl text-xs font-bold border transition flex items-center justify-center gap-1.5">
+          ❄️ ของเย็น (COLD)
+        </button>
+        <button id="tabDry" onclick="setCategory('DRY')" class="py-2.5 px-3 rounded-xl text-xs font-bold border transition flex items-center justify-center gap-1.5">
+          📦 ของแห้ง (DRY)
+        </button>
+      </div>
+    </div>
+
+    <div id="roundsContainer" class="space-y-2.5"></div>
+  </main>
+
+  <!-- VIEW 2: Order Detail & Receiving -->
+  <main id="detailView" class="hidden max-w-lg mx-auto px-4 pt-4 space-y-3.5">
+    <div class="bg-white border border-[#b2e0fb] rounded-2xl p-3.5 shadow-sm">
+      <div class="flex items-start justify-between gap-2">
+        <div>
+          <div class="flex items-center gap-1.5">
+            <span id="detailCatBadge" class="text-[11px] font-bold px-2 py-0.5 rounded-md text-white"></span>
+            <span id="detailStatusBadge" class="text-[11px] font-semibold px-2 py-0.5 rounded-md"></span>
+          </div>
+          <h2 id="detailRoundTitle" class="text-base font-bold text-[#005288] mt-1.5">W1 • -</h2>
+        </div>
+        <span id="detailSkuCount" class="text-xs font-bold text-[#0071BA] bg-[#f0f8ff] border border-[#b2e0fb] px-2.5 py-1 rounded-lg shrink-0">
+          0 รายการ
+        </span>
+      </div>
+
+      <div class="grid grid-cols-2 gap-2 mt-3 pt-3 border-t border-[#e5f3fd]">
+        <button onclick="toggleCheckAll()" class="py-2 px-3 rounded-xl border border-[#b2e0fb] bg-[#f5fbff] text-[#005288] text-xs font-semibold active:scale-98 transition">
+          ☑️ ติ๊กทั้งหมด
+        </button>
+        <button onclick="openDoModal()" class="py-2 px-3 rounded-xl bg-[#fd7100] text-white text-xs font-bold shadow-sm active:scale-98 transition flex items-center justify-center gap-1">
+          📸 ถ่ายรูป DO <span id="photoCountChip" class="bg-white/25 px-1.5 py-0.2 rounded text-[10px]">0</span>
+        </button>
+      </div>
+    </div>
+
+    <div id="photoRequiredBanner" class="bg-red-50 border border-[#D32F2F] rounded-xl px-3.5 py-2.5 flex items-center justify-between gap-2">
+      <div class="text-xs text-[#D32F2F] font-medium">
+        📷 <strong>บังคับแนบรูปใบ DO</strong> อย่างน้อย 1 รูปเป็นหลักฐานก่อนยืนยันรับสินค้า
+      </div>
+      <button onclick="openDoModal()" class="shrink-0 bg-[#D32F2F] text-white text-[11px] font-bold px-2.5 py-1.5 rounded-lg">
+        แนบรูป
+      </button>
+    </div>
+
+    <div id="photoAttachedBanner" class="hidden bg-[#f0f8ff] border border-[#0071BA] rounded-xl px-3.5 py-2.5 flex items-center justify-between gap-2">
+      <div class="text-xs text-[#005288] font-medium">
+        ✅ แนบรูปหลักฐานใบ DO แล้ว <strong id="attachedCountText">1</strong> รูป
+      </div>
+      <button onclick="openDoModal()" class="shrink-0 text-[#0071BA] underline text-xs font-semibold">
+        ดู/เพิ่มรูป
+      </button>
+    </div>
+
+    <div id="itemsContainer" class="space-y-2.5"></div>
+
+    <div class="bg-white border border-[#b2e0fb] rounded-2xl p-3.5 shadow-sm space-y-3">
+      <div>
+        <label class="block text-xs font-bold text-[#005288] mb-1">ผู้ตรวจรับ (ดึงอัตโนมัติตามบัญชี LINE)</label>
+        <input id="inspectorInput" type="text" readonly class="w-full bg-slate-100 border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold text-[#005288] cursor-not-allowed">
+      </div>
+
+      <div>
+        <label class="block text-xs font-bold text-[#005288] mb-1">รูปแบบการรับสินค้า</label>
+        <div class="grid grid-cols-2 gap-2">
+          <button id="modeFullBtn" type="button" onclick="setReceiveMode('RECEIVED')" class="py-2 px-2.5 rounded-xl text-xs font-bold border transition">
+            ✅ ยืนยันรับรอบนี้
+          </button>
+          <button id="modePartialBtn" type="button" onclick="setReceiveMode('PARTIAL')" class="py-2 px-2.5 rounded-xl text-xs font-bold border transition">
+            ⏳ รับบางส่วน (ค้างส่ง)
+          </button>
+        </div>
+      </div>
+
+      <div>
+        <label class="block text-xs font-bold text-[#005288] mb-1">หมายเหตุ / แจ้งปัญหาสินค้า</label>
+        <textarea id="remarkInput" rows="2" placeholder="ระบุปัญหาที่พบ ชื่อรายการ และจำนวน" class="w-full bg-[#f8fcff] border border-[#b2e0fb] rounded-xl px-3 py-2 text-xs text-slate-800 focus:outline-none focus:border-[#0071BA]"></textarea>
+      </div>
+    </div>
+  </main>
+
+  <!-- Sticky Bottom Confirm Bar -->
+  <div id="bottomActionBar" class="hidden fixed bottom-0 inset-x-0 bg-white/95 backdrop-blur border-t border-[#b2e0fb] z-20">
+    <div class="max-w-lg mx-auto px-4 py-3">
+      <button id="btnConfirmSubmit" onclick="handleConfirmReceive()" class="w-full py-3 rounded-xl text-sm font-bold text-white transition shadow-md">
+        ยืนยันรับสินค้า
+      </button>
+    </div>
+  </div>
+
+  <!-- MODAL: Capture / Upload DO & AI OCR -->
+  <div id="doModal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="bg-white w-full max-w-lg rounded-t-3xl sm:rounded-3xl border-t-4 border-[#0071BA] max-h-[90vh] overflow-y-auto p-4 space-y-3.5">
+      <div class="flex items-center justify-between">
+        <div>
+          <h3 class="text-sm font-bold text-[#005288]">ถ่ายรูป / สแกนใบรับของ (DO)</h3>
+          <p class="text-[11px] text-slate-500">ใช้เป็นภาพหลักฐานบังคับ และสแกนตัดยอดด้วย AI ได้ทันที</p>
+        </div>
+        <button onclick="closeDoModal()" class="w-8 h-8 rounded-full bg-slate-100 text-slate-600 font-bold text-sm">✕</button>
+      </div>
+
+      <input id="cameraFileInput" type="file" accept="image/*" capture="environment" class="hidden" onchange="handleFilesSelected(event)">
+      <input id="galleryFileInput" type="file" accept="image/*" multiple class="hidden" onchange="handleFilesSelected(event)">
+
+      <div class="grid grid-cols-2 gap-2.5">
+        <button type="button" onclick="document.getElementById('cameraFileInput').click()" class="py-2.5 px-3 rounded-xl bg-[#0071BA] text-white text-xs font-bold shadow-xs active:scale-98 transition">
+          📷 ถ่ายรูป
+        </button>
+        <button type="button" onclick="document.getElementById('galleryFileInput').click()" class="py-2.5 px-3 rounded-xl bg-[#f0f8ff] border border-[#0071BA] text-[#005288] text-xs font-bold active:scale-98 transition">
+          🖼️ เลือกรูปในเครื่อง
+        </button>
+      </div>
+
+      <div id="doPreviewContainer" class="relative min-h-[120px] bg-slate-50 border border-dashed border-[#b2e0fb] rounded-2xl p-3">
+        <div id="doEmptyHint" class="py-6 text-center text-xs text-slate-400">
+          ยังไม่มีรูปใบ DO กรุณากดปุ่ม <strong>ถ่ายรูป</strong> หรือ <strong>เลือกรูปในเครื่อง</strong>
+        </div>
+        <div id="doThumbGrid" class="hidden grid grid-cols-3 gap-2"></div>
+        <div id="ocrScanningOverlay" class="hidden absolute inset-0 bg-[#005288]/80 rounded-2xl flex flex-col items-center justify-center text-white overflow-hidden">
+          <div class="scan-line"></div>
+          <div class="text-xs font-bold">🔍 AI กำลังอ่านยอดจากใบ DO...</div>
+          <div class="text-[11px] text-[#b2e0fb] mt-1">กำลังรวมยอดใบหลักและใบแยกอัตโนมัติ</div>
+        </div>
+      </div>
+
+      <div id="ocrResultBox" class="hidden bg-[#f4faff] border border-[#b2e0fb] rounded-2xl p-3 space-y-2">
+        <div class="text-xs font-bold text-[#005288]" id="ocrSummaryTitle">ผลสแกนใบ DO</div>
+        <div id="ocrSummaryBody" class="text-xs text-slate-700 space-y-1"></div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-2 pt-1">
+        <button type="button" onclick="attachPhotosOnly()" class="py-2.5 px-3 rounded-xl border border-[#005288] text-[#005288] text-xs font-bold">
+          📎 แนบรูปหลักฐาน
+        </button>
+        <button id="btnRunOcr" type="button" onclick="runAiOcrScan()" class="py-2.5 px-3 rounded-xl bg-[#fd7100] text-white text-xs font-bold shadow-xs">
+          🔍 สแกนตัดยอด AI
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div id="toastBox" class="hidden fixed top-16 left-1/2 -translate-x-1/2 z-50 bg-[#005288] text-white text-xs font-semibold px-4 py-2.5 rounded-full shadow-lg"></div>
+
+  <script>
+    const LIFF_ID = '2012520828-rhinGNIQ';
+    const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbxLd2oTeq9Izr1zHgno8thKV1meUYfazeqdfDPaHP5Cn42vVzLeJZR_VZUsHJt7lvGd2g/exec';
+
+    const state = {
+      user: null,
+      branches: [],
+      months: [],
+      rounds: [],
+      selectedBranch: '',
+      selectedMonth: '',
+      selectedCategory: 'COLD',
+      activeRound: null,
+      draftItems: [],
+      receiveMode: 'RECEIVED',
+      newPhotos: [],
+      existingPhotoUrls: [],
+      detectedDoNumbers: []
+    };
+
+    async function callGasApi(action, bodyObj) {
+      const res = await fetch(GAS_API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(Object.assign({ action: action }, bodyObj || {})),
+        redirect: 'follow'
+      });
+      const rawText = await res.text();
+      let json = null;
+      try {
+        json = JSON.parse(rawText);
+      } catch (parseErr) {
+        throw new Error('สคริปต์ฝั่ง Google Apps Script ยังไม่อัปเดตเป็นแบบ JSON API (กรุณาวาง Code.gs ตัวล่าสุดแล้วกด Deploy -> Manage deployments -> ดินสอ -> New version)');
+      }
+      if (!json.ok) {
+        throw new Error(json.error || 'เกิดข้อผิดพลาดจาก Google Apps Script');
+      }
+      return json.data;
+    }
+
+    function showFatalScreen(stepTitle, detailMsg) {
+      const screen = document.getElementById('loadingScreen');
+      screen.classList.remove('hidden');
+      screen.innerHTML = `
+        <div class="bg-white border-2 border-[#D32F2F] rounded-2xl p-4 text-left shadow-sm">
+          <div class="text-sm font-bold text-[#D32F2F]">❌ ${escapeHtml(stepTitle)}</div>
+          <div class="text-xs text-slate-700 mt-2 break-words bg-red-50 p-3 rounded-xl border border-red-200 leading-relaxed">${escapeHtml(detailMsg)}</div>
+          <button onclick="window.location.reload()" class="mt-3 w-full py-2.5 rounded-xl bg-[#0071BA] text-white text-xs font-bold">ลองโหลดใหม่อีกครั้ง</button>
+        </div>`;
+    }
+
+    window.addEventListener('DOMContentLoaded', initApp);
+
+    async function initApp() {
+      try {
+        await liff.init({ liffId: LIFF_ID });
+        if (!liff.isLoggedIn()) {
+          liff.login({ redirectUri: window.location.href });
+          return;
+        }
+
+        document.getElementById('loadingStepTitle').textContent = 'กำลังโหลดข้อมูลออเดอร์สาขา...';
+        const profile = await liff.getProfile();
+        const res = await callGasApi('getInitialData', {
+          lineUserId: profile.userId,
+          displayName: profile.displayName
+        });
+
+        document.getElementById('loadingScreen').classList.add('hidden');
+
+        if (!res || !res.authorized) {
+          document.getElementById('unauthScreen').classList.remove('hidden');
+          document.getElementById('unauthMessage').textContent = (res && res.message) || 'ไม่พบสิทธิ์การใช้งาน';
+          document.getElementById('myLineUidText').textContent = profile.userId;
+          document.getElementById('headerSubtitle').textContent = 'ยังไม่ได้ผูกสิทธิ์สาขา';
+          return;
+        }
+
+        state.user = res.user;
+        state.branches = res.branches || [];
+        state.months = res.months || [];
+        state.rounds = res.rounds || [];
+
+        document.getElementById('headerSubtitle').textContent = `${state.user.name} (${state.user.role})`;
+        populateSelectors();
+
+        const params = new URLSearchParams(window.location.search);
+        const dlBranch = params.get('branch') || '';
+        const dlType = params.get('type') || '';
+        const dlDate = params.get('date') || '';
+
+        if (dlBranch && state.branches.includes(dlBranch)) {
+          state.selectedBranch = dlBranch;
+          document.getElementById('branchSelect').value = dlBranch;
+          updateTopBranchBadge();
+        }
+        if (dlType === 'COLD' || dlType === 'DRY') {
+          state.selectedCategory = dlType;
+        }
+
+        renderCategoryTabs();
+        renderRoundsList();
+        document.getElementById('roundsView').classList.remove('hidden');
+
+        if (dlBranch && dlDate) {
+          const targetKey = `${dlBranch}|${state.selectedCategory}|${dlDate}`;
+          const found = state.rounds.find(r => r.roundKey === targetKey);
+          if (found) openRoundDetail(found.roundKey);
+        }
+      } catch (err) {
+        showFatalScreen('เชื่อมต่อไม่สำเร็จ', err && err.message ? err.message : String(err));
+      }
+    }
+
+    function populateSelectors() {
+      const bSel = document.getElementById('branchSelect');
+      bSel.innerHTML = state.branches.map(b => `<option value="${b}">DQ${b}</option>`).join('');
+      state.selectedBranch = state.branches[0] || '';
+
+      const mSel = document.getElementById('monthSelect');
+      if (state.months.length === 0) {
+        const now = new Date();
+        state.months = [`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`];
+      }
+      mSel.innerHTML = state.months.map(m => `<option value="${m}">${formatThaiMonthLabel(m)}</option>`).join('');
+      state.selectedMonth = state.months[0] || '';
+      updateTopBranchBadge();
+    }
+
+    function formatThaiMonthLabel(yyyyMm) {
+      const parts = String(yyyyMm || '').split('-');
+      if (parts.length < 2) return yyyyMm;
+      const thaiMonths = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+      return `${thaiMonths[parseInt(parts[1], 10) - 1] || parts[1]} ${parts[0]}`;
+    }
+
+    function updateTopBranchBadge() {
+      const badge = document.getElementById('branchBadgeTop');
+      if (state.selectedBranch) {
+        badge.textContent = `DQ${state.selectedBranch}`;
+        badge.classList.remove('hidden');
+      }
+    }
+
+    function onFilterChange() {
+      state.selectedBranch = document.getElementById('branchSelect').value;
+      state.selectedMonth = document.getElementById('monthSelect').value;
+      updateTopBranchBadge();
+      renderRoundsList();
+    }
+
+    function setCategory(cat) {
+      state.selectedCategory = cat;
+      renderCategoryTabs();
+      renderRoundsList();
+    }
+
+    function renderCategoryTabs() {
+      const coldBtn = document.getElementById('tabCold');
+      const dryBtn = document.getElementById('tabDry');
+      if (state.selectedCategory === 'COLD') {
+        coldBtn.className = 'py-2.5 px-3 rounded-xl text-xs font-bold border border-[#0071BA] bg-[#0071BA] text-white shadow-xs flex items-center justify-center gap-1.5';
+        dryBtn.className = 'py-2.5 px-3 rounded-xl text-xs font-bold border border-[#b2e0fb] bg-white text-[#005288] flex items-center justify-center gap-1.5';
+      } else {
+        dryBtn.className = 'py-2.5 px-3 rounded-xl text-xs font-bold border border-[#fd7100] bg-[#fd7100] text-white shadow-xs flex items-center justify-center gap-1.5';
+        coldBtn.className = 'py-2.5 px-3 rounded-xl text-xs font-bold border border-[#b2e0fb] bg-white text-[#005288] flex items-center justify-center gap-1.5';
+      }
+    }
+
+    function getStatusMeta(status) {
+      if (status === 'RECEIVED') return { text: 'ตรวจรับแล้ว', cls: 'bg-emerald-50 text-emerald-700 border border-emerald-200' };
+      if (status === 'PARTIAL') return { text: 'รับบางส่วน', cls: 'bg-amber-50 text-[#fd7100] border border-amber-200' };
+      if (status === 'LATE') return { text: 'เลยกำหนดรับ', cls: 'bg-red-50 text-[#D32F2F] border border-red-200' };
+      return { text: 'รอตรวจรับ', cls: 'bg-[#f0f8ff] text-[#0071BA] border border-[#b2e0fb]' };
+    }
+
+    function renderRoundsList() {
+      const container = document.getElementById('roundsContainer');
+      const filtered = state.rounds.filter(r =>
+        r.branch === state.selectedBranch &&
+        r.monthKey === state.selectedMonth &&
+        r.category === state.selectedCategory
+      );
+
+      if (filtered.length === 0) {
+        container.innerHTML = `
+          <div class="bg-white border border-[#b2e0fb] rounded-2xl p-8 text-center">
+            <p class="text-xs font-semibold text-[#005288]">ไม่มีรอบส่งสินค้าในเดือนและหมวดที่เลือก</p>
+          </div>`;
+        return;
+      }
+
+      container.innerHTML = filtered.map(r => {
+        const st = getStatusMeta(r.status);
+        const inspectorInfo = r.log
+          ? `<div class="text-[11px] text-slate-500 mt-1">ตรวจรับโดย: <strong class="text-[#005288]">${escapeHtml(r.log.inspectorName)}</strong> • ${escapeHtml(r.log.timestamp)}</div>`
+          : '';
+
+        return `
+          <button onclick="openRoundDetail('${r.roundKey}')" class="w-full text-left bg-white border border-[#b2e0fb] hover:border-[#0071BA] rounded-2xl p-3.5 shadow-xs active:scale-[0.99] transition block">
+            <div class="flex items-center justify-between gap-2">
+              <div class="text-sm font-bold text-[#005288]">${escapeHtml(r.displayHeader)}</div>
+              <span class="text-[11px] font-bold px-2.5 py-0.5 rounded-full ${st.cls}">${st.text}</span>
+            </div>
+            <div class="flex items-center justify-between mt-1.5">
+              <span class="text-xs font-medium text-[#0071BA]">${r.items.length} รายการ</span>
+              <span class="text-xs font-bold text-[#005288]">เปิดตรวจรับ ›</span>
+            </div>
+            ${inspectorInfo}
+          </button>`;
+      }).join('');
+    }
+
+    function splitProductNameDisplay(fullName) {
+      const raw = String(fullName || '').trim();
+      const match = raw.match(/^(.*?)\s+(\d+[\d.,]*\s*(?:G|KG|ML|L|OZ|PC|PCS|PACK|BOX|BAG|BTL|GAL|CTN)(?:\/[A-Z0-9-]+)*.*)$/i);
+      if (match && match[1]) return { mainName: match[1].trim(), packSuffix: match[2].trim() };
+      return { mainName: raw, packSuffix: '' };
+    }
+
+    function openRoundDetail(roundKey) {
+      const round = state.rounds.find(r => r.roundKey === roundKey);
+      if (!round) return;
+
+      state.activeRound = round;
+      state.newPhotos = [];
+      state.existingPhotoUrls = round.log ? (round.log.photoUrls || []).slice() : [];
+      state.detectedDoNumbers = round.log && round.log.doNumbers ? [round.log.doNumbers] : [];
+      state.receiveMode = round.log && round.log.status === 'PARTIAL' ? 'PARTIAL' : 'RECEIVED';
+
+      const prevItemsMap = {};
+      if (round.log && Array.isArray(round.log.items)) {
+        round.log.items.forEach(it => { prevItemsMap[it.itemCode || it.itemName] = it; });
+      }
+
+      state.draftItems = round.items.map(it => {
+        const saved = prevItemsMap[it.itemCode || it.itemName];
+        return {
+          itemCode: it.itemCode,
+          itemName: it.itemName,
+          unit: it.unit,
+          orderQty: Number(it.orderQty),
+          actualQty: saved !== undefined ? Number(saved.actualQty) : Number(it.orderQty),
+          checked: saved !== undefined
+        };
+      });
+
+      const catBadge = document.getElementById('detailCatBadge');
+      catBadge.textContent = round.category === 'COLD' ? '❄️ ของเย็น (COLD)' : '📦 ของแห้ง (DRY)';
+      catBadge.className = `text-[11px] font-bold px-2 py-0.5 rounded-md text-white ${round.category === 'COLD' ? 'bg-[#0071BA]' : 'bg-[#fd7100]'}`;
+
+      const st = getStatusMeta(round.status);
+      const stBadge = document.getElementById('detailStatusBadge');
+      stBadge.textContent = st.text;
+      stBadge.className = `text-[11px] font-semibold px-2 py-0.5 rounded-md ${st.cls}`;
+
+      document.getElementById('detailRoundTitle').textContent = round.displayHeader;
+      document.getElementById('detailSkuCount').textContent = `${round.items.length} รายการ`;
+      document.getElementById('inspectorInput').value = state.user.name;
+      document.getElementById('remarkInput').value = round.log ? (round.log.remark || '') : '';
+      document.getElementById('ocrResultBox').classList.add('hidden');
+
+      setReceiveMode(state.receiveMode);
+      renderDetailItems();
+      updatePhotoStatusUI();
+
+      document.getElementById('roundsView').classList.add('hidden');
+      document.getElementById('detailView').classList.remove('hidden');
+      document.getElementById('bottomActionBar').classList.remove('hidden');
+      document.getElementById('btnBack').classList.remove('hidden');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function goBackView() {
+      document.getElementById('detailView').classList.add('hidden');
+      document.getElementById('bottomActionBar').classList.add('hidden');
+      document.getElementById('btnBack').classList.add('hidden');
+      document.getElementById('roundsView').classList.remove('hidden');
+      renderRoundsList();
+    }
+
+    function renderDetailItems() {
+      const container = document.getElementById('itemsContainer');
+      container.innerHTML = state.draftItems.map((it, idx) => {
+        const nameParts = splitProductNameDisplay(it.itemName);
+        const diff = Number((it.actualQty - it.orderQty).toFixed(2));
+        let diffBadge = '';
+        if (diff < 0) diffBadge = `<span class="inline-block mt-1 text-[10px] font-bold px-2 py-0.5 rounded bg-red-50 text-[#D32F2F] border border-red-200">ขาด ${Math.abs(diff)}</span>`;
+        else if (diff > 0) diffBadge = `<span class="inline-block mt-1 text-[10px] font-bold px-2 py-0.5 rounded bg-orange-50 text-[#fd7100] border border-orange-200">เกิน +${diff}</span>`;
+
+        const checkBtnCls = it.checked ? 'bg-[#0071BA] border-[#0071BA] text-white' : 'bg-white border-[#b2e0fb] text-transparent';
+
+        return `
+          <div class="bg-white border ${it.checked ? 'border-[#0071BA]' : 'border-[#b2e0fb]'} rounded-2xl p-3.5 shadow-xs transition">
+            <div class="flex items-start justify-between gap-2.5">
+              <div class="flex items-start gap-2.5 min-w-0 flex-1">
+                <button type="button" onclick="toggleItemCheck(${idx})" class="mt-0.5 w-6 h-6 rounded-full border-2 flex items-center justify-center text-xs font-bold shrink-0 transition ${checkBtnCls}">✓</button>
+                <div class="min-w-0 flex-1" onclick="toggleItemCheck(${idx})">
+                  <div class="text-[13px] leading-snug text-[#005288] break-words">
+                    <span class="font-bold">${escapeHtml(nameParts.mainName)}</span>
+                    ${nameParts.packSuffix ? `<span class="font-normal text-[#005288]"> ${escapeHtml(nameParts.packSuffix)}</span>` : ''}
+                  </div>
+                  <div class="text-[11px] font-medium text-[#0071BA] mt-0.5">${escapeHtml(it.unit || '-')}</div>
+                  <div class="text-[11px] text-slate-400 mt-0.5">${escapeHtml(it.itemCode || '-')}</div>
+                  ${diffBadge}
+                </div>
+              </div>
+              <div class="flex items-center bg-[#f2f9fe] border border-[#b2e0fb] rounded-full p-0.5 shrink-0">
+                <button type="button" onclick="adjustQty(${idx}, -1)" class="w-7 h-7 rounded-full bg-white text-[#005288] font-bold text-sm shadow-2xs active:scale-95">-</button>
+                <input type="number" step="any" value="${it.actualQty}" onchange="setExactQty(${idx}, this.value)" class="w-11 text-center bg-transparent text-xs font-bold text-[#005288] focus:outline-none">
+                <button type="button" onclick="adjustQty(${idx}, 1)" class="w-7 h-7 rounded-full bg-[#0071BA] text-white font-bold text-sm shadow-2xs active:scale-95">+</button>
+              </div>
+            </div>
+          </div>`;
+      }).join('');
+      updateSubmitButtonState();
+    }
+
+    function toggleItemCheck(idx) { state.draftItems[idx].checked = !state.draftItems[idx].checked; renderDetailItems(); }
+    function toggleCheckAll() { const allChecked = state.draftItems.every(it => it.checked); state.draftItems.forEach(it => { it.checked = !allChecked; }); renderDetailItems(); }
+    function adjustQty(idx, delta) { state.draftItems[idx].actualQty = Math.max(0, Number((state.draftItems[idx].actualQty + delta).toFixed(2))); state.draftItems[idx].checked = true; renderDetailItems(); }
+    function setExactQty(idx, val) { const num = parseFloat(val); state.draftItems[idx].actualQty = isNaN(num) || num < 0 ? 0 : num; state.draftItems[idx].checked = true; renderDetailItems(); }
+
+    function setReceiveMode(mode) {
+      state.receiveMode = mode;
+      document.getElementById('modeFullBtn').className = mode === 'RECEIVED'
+        ? 'py-2 px-2.5 rounded-xl text-xs font-bold border border-[#0071BA] bg-[#0071BA] text-white'
+        : 'py-2 px-2.5 rounded-xl text-xs font-bold border border-[#b2e0fb] bg-white text-[#005288]';
+      document.getElementById('modePartialBtn').className = mode === 'PARTIAL'
+        ? 'py-2 px-2.5 rounded-xl text-xs font-bold border border-[#fd7100] bg-[#fd7100] text-white'
+        : 'py-2 px-2.5 rounded-xl text-xs font-bold border border-[#b2e0fb] bg-white text-[#005288]';
+    }
+
+    function totalPhotoCount() { return state.newPhotos.length + state.existingPhotoUrls.length; }
+
+    function updatePhotoStatusUI() {
+      const count = totalPhotoCount();
+      document.getElementById('photoCountChip').textContent = count;
+      if (count === 0) {
+        document.getElementById('photoRequiredBanner').classList.remove('hidden');
+        document.getElementById('photoAttachedBanner').classList.add('hidden');
+      } else {
+        document.getElementById('photoRequiredBanner').classList.add('hidden');
+        document.getElementById('photoAttachedBanner').classList.remove('hidden');
+        document.getElementById('attachedCountText').textContent = count;
+      }
+      renderModalThumbnails();
+      updateSubmitButtonState();
+    }
+
+    function updateSubmitButtonState() {
+      const btn = document.getElementById('btnConfirmSubmit');
+      const countPhotos = totalPhotoCount();
+      const allChecked = state.draftItems.length > 0 && state.draftItems.every(it => it.checked);
+
+      if (countPhotos === 0) {
+        btn.disabled = true;
+        btn.textContent = '📷 ต้องถ่ายรูปใบ DO ก่อนยืนยัน';
+        btn.className = 'w-full py-3 rounded-xl text-sm font-bold bg-slate-300 text-slate-600 cursor-not-allowed';
+        return;
+      }
+      if (!allChecked) {
+        const checkedNum = state.draftItems.filter(it => it.checked).length;
+        btn.disabled = true;
+        btn.textContent = `กรุณาติ๊กเช็ครายการให้ครบ (${checkedNum}/${state.draftItems.length})`;
+        btn.className = 'w-full py-3 rounded-xl text-sm font-bold bg-slate-300 text-slate-600 cursor-not-allowed';
+        return;
+      }
+      btn.disabled = false;
+      btn.textContent = '✅ ยืนยันการรับสินค้า';
+      btn.className = 'w-full py-3 rounded-xl text-sm font-bold bg-[#005288] hover:bg-[#0071BA] text-white shadow-md active:scale-99 transition';
+    }
+
+    function openDoModal() { renderModalThumbnails(); document.getElementById('doModal').classList.remove('hidden'); }
+    function closeDoModal() { document.getElementById('doModal').classList.add('hidden'); }
+
+    async function handleFilesSelected(event) {
+      const files = Array.from(event.target.files || []);
+      for (const file of files) {
+        const compressed = await compressImageFile(file, 1280, 0.78);
+        state.newPhotos.push(compressed);
+      }
+      event.target.value = '';
+      updatePhotoStatusUI();
+    }
+
+    function compressImageFile(file, maxDim, quality) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = e => {
+          const img = new Image();
+          img.onload = () => {
+            let w = img.width, h = img.height;
+            if (w > maxDim || h > maxDim) {
+              if (w > h) { h = Math.round((h * maxDim) / w); w = maxDim; }
+              else { w = Math.round((w * maxDim) / h); h = maxDim; }
+            }
+            const canvas = document.createElement('canvas');
+            canvas.width = w; canvas.height = h;
+            canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+            const dataUrl = canvas.toDataURL('image/jpeg', quality);
+            resolve({ dataUrl, base64: dataUrl.split(',')[1], mimeType: 'image/jpeg' });
+          };
+          img.onerror = reject;
+          img.src = e.target.result;
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+    }
+
+    function renderModalThumbnails() {
+      const hint = document.getElementById('doEmptyHint');
+      const grid = document.getElementById('doThumbGrid');
+      if (totalPhotoCount() === 0) {
+        hint.classList.remove('hidden');
+        grid.classList.add('hidden');
+        grid.innerHTML = '';
+        return;
+      }
+      hint.classList.add('hidden');
+      grid.classList.remove('hidden');
+
+      const existingHtml = state.existingPhotoUrls.map((url, idx) => `
+        <div class="relative rounded-xl overflow-hidden border border-[#b2e0fb] bg-white h-24 flex items-center justify-center p-2 text-center">
+          <a href="${url}" target="_blank" class="text-[11px] font-semibold text-[#0071BA] underline">รูปเดิม #${idx + 1}</a>
+          <button type="button" onclick="removeExistingPhoto(${idx})" class="absolute top-1 right-1 w-5 h-5 rounded-full bg-[#D32F2F] text-white text-[10px] font-bold">✕</button>
+        </div>`).join('');
+
+      const newHtml = state.newPhotos.map((p, idx) => `
+        <div class="relative rounded-xl overflow-hidden border border-[#0071BA] h-24 bg-slate-100">
+          <img src="${p.dataUrl}" class="w-full h-full object-cover">
+          <button type="button" onclick="removeNewPhoto(${idx})" class="absolute top-1 right-1 w-5 h-5 rounded-full bg-[#D32F2F] text-white text-[10px] font-bold">✕</button>
+        </div>`).join('');
+
+      grid.innerHTML = existingHtml + newHtml;
+    }
+
+    function removeNewPhoto(idx) { state.newPhotos.splice(idx, 1); updatePhotoStatusUI(); }
+    function removeExistingPhoto(idx) { state.existingPhotoUrls.splice(idx, 1); updatePhotoStatusUI(); }
+
+    function attachPhotosOnly() {
+      if (totalPhotoCount() === 0) { showToast('กรุณาถ่ายรูปหรือเลือกรูปในเครื่องอย่างน้อย 1 รูป', true); return; }
+      closeDoModal();
+      showToast('แนบรูปหลักฐานใบ DO เรียบร้อยแล้ว');
+    }
+
+    async function runAiOcrScan() {
+      if (state.newPhotos.length === 0) { showToast('กรุณาถ่ายหรือเลือกรูปใบ DO ใหม่ก่อนสแกนด้วย AI', true); return; }
+      const overlay = document.getElementById('ocrScanningOverlay');
+      const btn = document.getElementById('btnRunOcr');
+      overlay.classList.remove('hidden');
+      btn.disabled = true;
+
+      try {
+        const res = await callGasApi('scanDoImagesWithGemini', {
+          payload: {
+            images: state.newPhotos.map(p => ({ base64: p.base64, mimeType: p.mimeType })),
+            items: state.draftItems
+          }
+        });
+        applyOcrResult(res);
+      } catch (err) {
+        showToast(err.message || 'สแกนไม่สำเร็จ', true);
+      } finally {
+        overlay.classList.add('hidden');
+        btn.disabled = false;
+      }
+    }
+
+    function applyOcrResult(res) {
+      if (!res) return;
+      if (Array.isArray(res.doNumbers) && res.doNumbers.length) state.detectedDoNumbers = res.doNumbers;
+
+      let matchedCount = 0;
+      const notesCollected = [];
+
+      (res.matchedItems || []).forEach(m => {
+        const target = state.draftItems.find(it =>
+          (m.itemCode && it.itemCode === m.itemCode) ||
+          (it.itemName && m.itemName && it.itemName.includes(m.itemName))
+        );
+        if (target && typeof m.deliveredQty === 'number') {
+          target.actualQty = m.deliveredQty;
+          target.checked = true;
+          matchedCount++;
+          if (m.note) notesCollected.push(`${target.itemName}: ${m.note}`);
+        }
+      });
+
+      if (notesCollected.length && !document.getElementById('remarkInput').value.trim()) {
+        document.getElementById('remarkInput').value = notesCollected.join(' | ');
+      }
+      renderDetailItems();
+
+      const box = document.getElementById('ocrResultBox');
+      box.classList.remove('hidden');
+      document.getElementById('ocrSummaryTitle').textContent = `✨ สแกนและกรอกยอดอัตโนมัติ ${matchedCount} รายการ`;
+      const doText = state.detectedDoNumbers.length ? `เลขที่ DO: ${state.detectedDoNumbers.join(', ')}` : '';
+      const warnText = Array.isArray(res.warnings) && res.warnings.length ? res.warnings.join(' • ') : 'ตรวจสอบยอดในรายการแล้วกดปิดหน้าต่างนี้ได้เลย';
+      document.getElementById('ocrSummaryBody').innerHTML = `
+        ${doText ? `<div class="font-semibold text-[#0071BA]">${escapeHtml(doText)}</div>` : ''}
+        <div>${escapeHtml(warnText)}</div>`;
+      showToast('นำยอดจากใบ DO ไปกรอกเรียบร้อยแล้ว');
+    }
+
+    async function handleConfirmReceive() {
+      if (totalPhotoCount() === 0) { showToast('ต้องถ่ายรูปใบ DO เป็นหลักฐานก่อนยืนยัน', true); return; }
+      const btn = document.getElementById('btnConfirmSubmit');
+      btn.disabled = true;
+      btn.textContent = 'กำลังบันทึกข้อมูลและอัปโหลดรูป DO...';
+
+      const payload = {
+        lineUserId: state.user.lineUserId,
+        inspectorName: state.user.name,
+        branch: state.activeRound.branch,
+        category: state.activeRound.category,
+        deliveryDateIso: state.activeRound.deliveryDateIso,
+        weekLabel: state.activeRound.weekLabel,
+        displayDate: state.activeRound.displayDate,
+        receiveMode: state.receiveMode,
+        remark: document.getElementById('remarkInput').value.trim(),
+        doNumbers: state.detectedDoNumbers.join(', '),
+        photos: state.newPhotos.map(p => ({ base64: p.base64, mimeType: p.mimeType })),
+        existingPhotoUrls: state.existingPhotoUrls,
+        items: state.draftItems
+      };
+
+      try {
+        const res = await callGasApi('submitOrderReceiving', { payload: payload });
+        state.activeRound.status = res.status;
+        state.activeRound.log = {
+          timestamp: res.timestamp,
+          status: res.status,
+          inspectorName: res.inspectorName,
+          remark: payload.remark,
+          doNumbers: payload.doNumbers,
+          photoUrls: res.photoUrls,
+          items: state.draftItems
+        };
+        showToast(res.emailSent ? 'บันทึกสำเร็จ และส่ง Email แจ้งปัญหาแล้ว' : 'บันทึกการรับสินค้าสำเร็จ');
+        goBackView();
+      } catch (err) {
+        updateSubmitButtonState();
+        showToast('บันทึกไม่สำเร็จ: ' + err.message, true);
+      }
+    }
+
+    function copyMyUid() {
+      navigator.clipboard.writeText(document.getElementById('myLineUidText').textContent);
+      showToast('คัดลอก LINE User ID แล้ว');
+    }
+
+    function showToast(msg, isError) {
+      const box = document.getElementById('toastBox');
+      box.textContent = msg;
+      box.className = `fixed top-16 left-1/2 -translate-x-1/2 z-50 text-white text-xs font-semibold px-4 py-2.5 rounded-full shadow-lg ${isError ? 'bg-[#D32F2F]' : 'bg-[#005288]'}`;
+      box.classList.remove('hidden');
+      setTimeout(() => box.classList.add('hidden'), 3200);
+    }
+
+    function escapeHtml(str) {
+      return String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+  </script>
+</body>
+</html>
