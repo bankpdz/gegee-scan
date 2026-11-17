@@ -41,7 +41,6 @@
         </div>
       </div>
 
-      <!-- ปุ่มแสดงรหัสสาขา (กดเพื่อเปลี่ยนสาขาได้ทันทีกรณีดูแลมากกว่า 1 สาขา) -->
       <button id="branchBadgeTop" type="button" onclick="onTopBranchClick()" class="hidden bg-white/15 border border-[#b2e0fb]/60 text-white text-xs font-semibold px-2.5 py-1 rounded-lg active:scale-95 transition">
         DQ----
       </button>
@@ -71,7 +70,7 @@
     </div>
   </div>
 
-  <!-- VIEW 0: Branch Picker Screen (แสดงเฉพาะผู้ที่ดูแลมากกว่า 1 สาขาในคอลัมน์ E) -->
+  <!-- VIEW 0: Branch Picker Screen -->
   <main id="branchPickerView" class="hidden max-w-lg mx-auto px-4 pt-5 space-y-3.5">
     <div class="bg-white border border-[#b2e0fb] rounded-2xl p-4 shadow-sm">
       <div class="flex items-center justify-between">
@@ -119,12 +118,12 @@
 
   <!-- VIEW 2: Order Detail & Receiving -->
   <main id="detailView" class="hidden max-w-lg mx-auto px-4 pt-4 space-y-3.5">
-    <div class="bg-white border border-[#b2e0fb] rounded-2xl p-3.5 shadow-sm">
+    <div id="detailHeaderCard" class="bg-white border border-[#b2e0fb] rounded-2xl p-3.5 shadow-sm transition">
       <div class="flex items-start justify-between gap-2">
         <div>
           <div class="flex items-center gap-1.5">
             <span id="detailCatBadge" class="text-[11px] font-bold px-2 py-0.5 rounded-md text-white"></span>
-            <span id="detailStatusBadge" class="text-[11px] font-semibold px-2 py-0.5 rounded-md"></span>
+            <span id="detailStatusBadge" class="text-[11px] font-bold px-2 py-0.5 rounded-md"></span>
           </div>
           <h2 id="detailRoundTitle" class="text-base font-bold text-[#005288] mt-1.5">W1 • -</h2>
         </div>
@@ -161,8 +160,10 @@
       </button>
     </div>
 
+    <!-- รายการสินค้า (สีเขียวเมื่อรับครบ / สีแดงเมื่อแก้ไขยอดไม่ครบหรือเกิน) -->
     <div id="itemsContainer" class="space-y-2.5"></div>
 
+    <!-- ฟอร์มผู้ตรวจรับและหมายเหตุ (ตัดตัวเลือกรูปแบบการรับสินค้าออกแล้ว) -->
     <div class="bg-white border border-[#b2e0fb] rounded-2xl p-3.5 shadow-sm space-y-3">
       <div>
         <label class="block text-xs font-bold text-[#005288] mb-1">ผู้ตรวจรับ (ดึงอัตโนมัติตามบัญชี LINE)</label>
@@ -170,20 +171,8 @@
       </div>
 
       <div>
-        <label class="block text-xs font-bold text-[#005288] mb-1">รูปแบบการรับสินค้า</label>
-        <div class="grid grid-cols-2 gap-2">
-          <button id="modeFullBtn" type="button" onclick="setReceiveMode('RECEIVED')" class="py-2 px-2.5 rounded-xl text-xs font-bold border transition">
-            ✅ ยืนยันรับรอบนี้
-          </button>
-          <button id="modePartialBtn" type="button" onclick="setReceiveMode('PARTIAL')" class="py-2 px-2.5 rounded-xl text-xs font-bold border transition">
-            ⏳ รับบางส่วน (ค้างส่ง)
-          </button>
-        </div>
-      </div>
-
-      <div>
         <label class="block text-xs font-bold text-[#005288] mb-1">หมายเหตุ / แจ้งปัญหาสินค้า</label>
-        <textarea id="remarkInput" rows="2" placeholder="ระบุปัญหาที่พบ ชื่อรายการ และจำนวน" class="w-full bg-[#f8fcff] border border-[#b2e0fb] rounded-xl px-3 py-2 text-xs text-slate-800 focus:outline-none focus:border-[#0071BA]"></textarea>
+        <textarea id="remarkInput" rows="2" placeholder="ระบุปัญหาที่พบ ชื่อรายการ และจำนวน (ถ้ามี)" class="w-full bg-[#f8fcff] border border-[#b2e0fb] rounded-xl px-3 py-2 text-xs text-slate-800 focus:outline-none focus:border-[#0071BA]"></textarea>
       </div>
     </div>
   </main>
@@ -266,7 +255,6 @@
       selectedCategory: 'COLD',
       activeRound: null,
       draftItems: [],
-      receiveMode: 'RECEIVED',
       newPhotos: [],
       existingPhotoUrls: [],
       detectedDoNumbers: []
@@ -352,7 +340,6 @@
         }
         renderCategoryTabs();
 
-        // กรณีเปิดจากปุ่ม Deep Link ในการ์ดแจ้งเตือน LINE ที่ระบุสาขามาชัดเจนแล้ว
         if (dlBranch && state.branches.includes(dlBranch)) {
           chooseBranchFromPicker(dlBranch, false);
           if (dlDate) {
@@ -363,7 +350,6 @@
           return;
         }
 
-        // กรณีดูแลมากกว่า 1 สาขาในคอลัมน์ E ให้แสดงหน้ากดเลือกสาขาก่อนเสมอ
         if (state.branches.length > 1) {
           openBranchPicker();
         } else {
@@ -391,20 +377,26 @@
       grid.innerHTML = state.branches.map(b => {
         const branchName = state.branchMeta[b] || '';
         const branchRounds = state.rounds.filter(r => r.branch === b);
-        const pendingCount = branchRounds.filter(r => r.status !== 'RECEIVED').length;
+        const issueCount = branchRounds.filter(r => r.status === 'ISSUE' || r.status === 'PARTIAL').length;
+        const unreceivedCount = branchRounds.filter(r => r.status === 'PENDING' || r.status === 'LATE').length;
         const lateCount = branchRounds.filter(r => r.status === 'LATE').length;
 
-        let badgeHtml = `<span class="text-[11px] font-semibold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">ครบทุกรอบ</span>`;
+        let badgeHtml = `<span class="text-[11px] font-bold px-2.5 py-1 rounded-full bg-emerald-600 text-white shadow-2xs">รับครบทุกรอบ</span>`;
+        let cardBorderCls = 'border-[#b2e0fb] hover:border-[#0071BA]';
+
         if (branchRounds.length === 0) {
           badgeHtml = `<span class="text-[11px] font-medium px-2.5 py-1 rounded-full bg-slate-100 text-slate-500">ยังไม่มีออเดอร์</span>`;
+        } else if (issueCount > 0) {
+          badgeHtml = `<span class="text-[11px] font-bold px-2.5 py-1 rounded-full bg-[#D32F2F] text-white shadow-2xs">ไม่ครบ/แก้ยอด ${issueCount} รอบ</span>`;
+          cardBorderCls = 'border-red-300 hover:border-[#D32F2F]';
         } else if (lateCount > 0) {
-          badgeHtml = `<span class="text-[11px] font-bold px-2.5 py-1 rounded-full bg-red-50 text-[#D32F2F] border border-red-200">ค้างรับ ${pendingCount} รอบ</span>`;
-        } else if (pendingCount > 0) {
-          badgeHtml = `<span class="text-[11px] font-bold px-2.5 py-1 rounded-full bg-[#f0f8ff] text-[#0071BA] border border-[#b2e0fb]">รอรับ ${pendingCount} รอบ</span>`;
+          badgeHtml = `<span class="text-[11px] font-bold px-2.5 py-1 rounded-full bg-red-50 text-[#D32F2F] border border-red-200">เลยกำหนด ${lateCount} รอบ</span>`;
+        } else if (unreceivedCount > 0) {
+          badgeHtml = `<span class="text-[11px] font-bold px-2.5 py-1 rounded-full bg-[#f0f8ff] text-[#0071BA] border border-[#b2e0fb]">รอรับ ${unreceivedCount} รอบ</span>`;
         }
 
         return `
-          <button type="button" onclick="chooseBranchFromPicker('${b}', true)" class="w-full text-left bg-white border-2 border-[#b2e0fb] hover:border-[#0071BA] rounded-2xl p-4 shadow-xs active:scale-[0.99] transition flex items-center justify-between gap-3">
+          <button type="button" onclick="chooseBranchFromPicker('${b}', true)" class="w-full text-left bg-white border-2 ${cardBorderCls} rounded-2xl p-4 shadow-xs active:scale-[0.99] transition flex items-center justify-between gap-3">
             <div>
               <div class="flex items-center gap-2">
                 <span class="text-base font-bold text-[#005288]">DQ${escapeHtml(b)}</span>
@@ -499,11 +491,50 @@
       }
     }
 
+    /**
+     * กำหนดสีสถานะรอบส่ง:
+     * - รับครบ -> สีเขียว (RECEIVED)
+     * - ไม่ครบ / มีการแก้ไขจำนวน -> สีแดง (ISSUE / PARTIAL)
+     */
     function getStatusMeta(status) {
-      if (status === 'RECEIVED') return { text: 'ตรวจรับแล้ว', cls: 'bg-emerald-50 text-emerald-700 border border-emerald-200' };
-      if (status === 'PARTIAL') return { text: 'รับบางส่วน', cls: 'bg-amber-50 text-[#fd7100] border border-amber-200' };
-      if (status === 'LATE') return { text: 'เลยกำหนดรับ', cls: 'bg-red-50 text-[#D32F2F] border border-red-200' };
-      return { text: 'รอตรวจรับ', cls: 'bg-[#f0f8ff] text-[#0071BA] border border-[#b2e0fb]' };
+      if (status === 'RECEIVED') {
+        return {
+          text: '✓ ตรวจรับครบแล้ว',
+          badgeCls: 'bg-emerald-600 text-white shadow-2xs',
+          cardCls: 'bg-emerald-50/70 border-2 border-emerald-500 hover:border-emerald-600',
+          titleCls: 'text-emerald-900',
+          actionText: 'ดูรายการรับแล้ว ›',
+          actionCls: 'text-emerald-700'
+        };
+      }
+      if (status === 'ISSUE' || status === 'PARTIAL') {
+        return {
+          text: '✕ รับไม่ครบ / แก้ไขยอด',
+          badgeCls: 'bg-[#D32F2F] text-white shadow-2xs',
+          cardCls: 'bg-red-50/70 border-2 border-[#D32F2F] hover:border-red-700',
+          titleCls: 'text-[#D32F2F]',
+          actionText: 'ตรวจสอบ / แก้ไข ›',
+          actionCls: 'text-[#D32F2F]'
+        };
+      }
+      if (status === 'LATE') {
+        return {
+          text: 'เลยกำหนดรับ',
+          badgeCls: 'bg-red-100 text-[#D32F2F] border border-red-300',
+          cardCls: 'bg-white border border-red-300 hover:border-[#D32F2F]',
+          titleCls: 'text-[#005288]',
+          actionText: 'เปิดตรวจรับ ›',
+          actionCls: 'text-[#D32F2F]'
+        };
+      }
+      return {
+        text: 'รอตรวจรับ',
+        badgeCls: 'bg-[#f0f8ff] text-[#0071BA] border border-[#b2e0fb]',
+        cardCls: 'bg-white border border-[#b2e0fb] hover:border-[#0071BA]',
+        titleCls: 'text-[#005288]',
+        actionText: 'เปิดตรวจรับ ›',
+        actionCls: 'text-[#005288]'
+      };
     }
 
     function renderRoundsList() {
@@ -525,18 +556,18 @@
       container.innerHTML = filtered.map(r => {
         const st = getStatusMeta(r.status);
         const inspectorInfo = r.log
-          ? `<div class="text-[11px] text-slate-500 mt-1">ตรวจรับโดย: <strong class="text-[#005288]">${escapeHtml(r.log.inspectorName)}</strong> • ${escapeHtml(r.log.timestamp)}</div>`
+          ? `<div class="text-[11px] text-slate-600 mt-1.5 pt-1.5 border-t border-slate-200/70">ตรวจรับโดย: <strong class="text-[#005288]">${escapeHtml(r.log.inspectorName)}</strong> • ${escapeHtml(r.log.timestamp)}</div>`
           : '';
 
         return `
-          <button onclick="openRoundDetail('${r.roundKey}')" class="w-full text-left bg-white border border-[#b2e0fb] hover:border-[#0071BA] rounded-2xl p-3.5 shadow-xs active:scale-[0.99] transition block">
+          <button onclick="openRoundDetail('${r.roundKey}')" class="w-full text-left ${st.cardCls} rounded-2xl p-3.5 shadow-xs active:scale-[0.99] transition block">
             <div class="flex items-center justify-between gap-2">
-              <div class="text-sm font-bold text-[#005288]">${escapeHtml(r.displayHeader)}</div>
-              <span class="text-[11px] font-bold px-2.5 py-0.5 rounded-full ${st.cls}">${st.text}</span>
+              <div class="text-sm font-bold ${st.titleCls}">${escapeHtml(r.displayHeader)}</div>
+              <span class="text-[11px] font-bold px-2.5 py-0.5 rounded-full ${st.badgeCls}">${st.text}</span>
             </div>
             <div class="flex items-center justify-between mt-1.5">
               <span class="text-xs font-medium text-[#0071BA]">${r.items.length} รายการ</span>
-              <span class="text-xs font-bold text-[#005288]">เปิดตรวจรับ ›</span>
+              <span class="text-xs font-bold ${st.actionCls}">${st.actionText}</span>
             </div>
             ${inspectorInfo}
           </button>`;
@@ -558,7 +589,6 @@
       state.newPhotos = [];
       state.existingPhotoUrls = round.log ? (round.log.photoUrls || []).slice() : [];
       state.detectedDoNumbers = round.log && round.log.doNumbers ? [round.log.doNumbers] : [];
-      state.receiveMode = round.log && round.log.status === 'PARTIAL' ? 'PARTIAL' : 'RECEIVED';
 
       const prevItemsMap = {};
       if (round.log && Array.isArray(round.log.items)) {
@@ -581,18 +611,12 @@
       catBadge.textContent = round.category === 'COLD' ? '❄️ ของเย็น (COLD)' : '📦 ของแห้ง (DRY)';
       catBadge.className = `text-[11px] font-bold px-2 py-0.5 rounded-md text-white ${round.category === 'COLD' ? 'bg-[#0071BA]' : 'bg-[#fd7100]'}`;
 
-      const st = getStatusMeta(round.status);
-      const stBadge = document.getElementById('detailStatusBadge');
-      stBadge.textContent = st.text;
-      stBadge.className = `text-[11px] font-semibold px-2 py-0.5 rounded-md ${st.cls}`;
-
       document.getElementById('detailRoundTitle').textContent = round.displayHeader;
       document.getElementById('detailSkuCount').textContent = `${round.items.length} รายการ`;
       document.getElementById('inspectorInput').value = state.user.name;
       document.getElementById('remarkInput').value = round.log ? (round.log.remark || '') : '';
       document.getElementById('ocrResultBox').classList.add('hidden');
 
-      setReceiveMode(state.receiveMode);
       renderDetailItems();
       updatePhotoStatusUI();
 
@@ -613,22 +637,83 @@
       renderRoundsList();
     }
 
+    function hasAnyDiscrepancyInDraft() {
+      return state.draftItems.some(it => Math.abs(Number(it.actualQty) - Number(it.orderQty)) > 0.0001);
+    }
+
+    function updateDetailHeaderStatusLive() {
+      const stBadge = document.getElementById('detailStatusBadge');
+      const headerCard = document.getElementById('detailHeaderCard');
+      const allChecked = state.draftItems.length > 0 && state.draftItems.every(it => it.checked);
+      const hasDiff = hasAnyDiscrepancyInDraft();
+
+      if (hasDiff) {
+        stBadge.textContent = '✕ มีรายการไม่ครบ / แก้ไขยอด';
+        stBadge.className = 'text-[11px] font-bold px-2 py-0.5 rounded-md bg-[#D32F2F] text-white';
+        headerCard.className = 'bg-white border-2 border-[#D32F2F] rounded-2xl p-3.5 shadow-sm transition';
+      } else if (allChecked) {
+        stBadge.textContent = '✓ รายการครบตามยอดสั่ง';
+        stBadge.className = 'text-[11px] font-bold px-2 py-0.5 rounded-md bg-emerald-600 text-white';
+        headerCard.className = 'bg-white border-2 border-emerald-500 rounded-2xl p-3.5 shadow-sm transition';
+      } else {
+        const st = getStatusMeta(state.activeRound ? state.activeRound.status : 'PENDING');
+        stBadge.textContent = st.text;
+        stBadge.className = `text-[11px] font-bold px-2 py-0.5 rounded-md ${st.badgeCls}`;
+        headerCard.className = 'bg-white border border-[#b2e0fb] rounded-2xl p-3.5 shadow-sm transition';
+      }
+    }
+
+    /**
+     * แสดงผลการ์ดสินค้าแต่ละรายการ:
+     * - หากมีการแก้ไขจำนวนไม่ตรงยอดสั่ง (ขาด/เกิน) -> การ์ดสีแดง + ปุ่มติ๊กสีแดง
+     * - หากติ๊กแล้วและจำนวนครบตรงยอดสั่ง -> การ์ดสีเขียว + ปุ่มติ๊กสีเขียว
+     * - หากยังไม่ติ๊กและยังไม่ได้แก้ยอด -> สีปกติ (ฟ้าอ่อน)
+     */
     function renderDetailItems() {
       const container = document.getElementById('itemsContainer');
       container.innerHTML = state.draftItems.map((it, idx) => {
         const nameParts = splitProductNameDisplay(it.itemName);
         const diff = Number((it.actualQty - it.orderQty).toFixed(2));
-        let diffBadge = '';
-        if (diff < 0) diffBadge = `<span class="inline-block mt-1 text-[10px] font-bold px-2 py-0.5 rounded bg-red-50 text-[#D32F2F] border border-red-200">ขาด ${Math.abs(diff)}</span>`;
-        else if (diff > 0) diffBadge = `<span class="inline-block mt-1 text-[10px] font-bold px-2 py-0.5 rounded bg-orange-50 text-[#fd7100] border border-orange-200">เกิน +${diff}</span>`;
+        const isModified = Math.abs(diff) > 0.0001;
 
-        const checkBtnCls = it.checked ? 'bg-[#0071BA] border-[#0071BA] text-white' : 'bg-white border-[#b2e0fb] text-transparent';
+        let cardThemeCls = 'bg-white border border-[#b2e0fb]';
+        let checkBtnCls = 'bg-white border-[#b2e0fb] text-transparent';
+        let checkIcon = '✓';
+        let stepperWrapCls = 'bg-[#f2f9fe] border-[#b2e0fb]';
+        let plusBtnCls = 'bg-[#0071BA] text-white';
+        let qtyTextCls = 'text-[#005288]';
+        let diffBadge = '';
+
+        if (isModified) {
+          // ไม่ครบ หรือมีการแก้ไขจำนวน -> สีแดงทันที
+          cardThemeCls = 'bg-red-50/75 border-2 border-[#D32F2F]';
+          checkBtnCls = 'bg-[#D32F2F] border-[#D32F2F] text-white';
+          checkIcon = '!';
+          stepperWrapCls = 'bg-white border-[#D32F2F]';
+          plusBtnCls = 'bg-[#D32F2F] text-white';
+          qtyTextCls = 'text-[#D32F2F]';
+
+          if (diff < 0) {
+            diffBadge = `<span class="inline-block mt-1 text-[10px] font-bold px-2 py-0.5 rounded-md bg-[#D32F2F] text-white">ไม่ครบ ขาด ${Math.abs(diff)} (สั่ง ${it.orderQty})</span>`;
+          } else {
+            diffBadge = `<span class="inline-block mt-1 text-[10px] font-bold px-2 py-0.5 rounded-md bg-[#D32F2F] text-white">แก้ไขยอด เกิน +${diff} (สั่ง ${it.orderQty})</span>`;
+          }
+        } else if (it.checked) {
+          // กดตรวจรับแล้ว และยอดครบ -> สีเขียว
+          cardThemeCls = 'bg-emerald-50/75 border-2 border-emerald-500';
+          checkBtnCls = 'bg-emerald-600 border-emerald-600 text-white';
+          checkIcon = '✓';
+          stepperWrapCls = 'bg-white border-emerald-400';
+          plusBtnCls = 'bg-emerald-600 text-white';
+          qtyTextCls = 'text-emerald-800';
+          diffBadge = `<span class="inline-block mt-1 text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-600 text-white">รับครบตามสั่ง</span>`;
+        }
 
         return `
-          <div class="bg-white border ${it.checked ? 'border-[#0071BA]' : 'border-[#b2e0fb]'} rounded-2xl p-3.5 shadow-xs transition">
+          <div class="${cardThemeCls} rounded-2xl p-3.5 shadow-xs transition">
             <div class="flex items-start justify-between gap-2.5">
               <div class="flex items-start gap-2.5 min-w-0 flex-1">
-                <button type="button" onclick="toggleItemCheck(${idx})" class="mt-0.5 w-6 h-6 rounded-full border-2 flex items-center justify-center text-xs font-bold shrink-0 transition ${checkBtnCls}">✓</button>
+                <button type="button" onclick="toggleItemCheck(${idx})" class="mt-0.5 w-6 h-6 rounded-full border-2 flex items-center justify-center text-xs font-bold shrink-0 transition ${checkBtnCls}">${checkIcon}</button>
                 <div class="min-w-0 flex-1" onclick="toggleItemCheck(${idx})">
                   <div class="text-[13px] leading-snug text-[#005288] break-words">
                     <span class="font-bold">${escapeHtml(nameParts.mainName)}</span>
@@ -639,30 +724,51 @@
                   ${diffBadge}
                 </div>
               </div>
-              <div class="flex items-center bg-[#f2f9fe] border border-[#b2e0fb] rounded-full p-0.5 shrink-0">
+              <div class="flex items-center border ${stepperWrapCls} rounded-full p-0.5 shrink-0">
                 <button type="button" onclick="adjustQty(${idx}, -1)" class="w-7 h-7 rounded-full bg-white text-[#005288] font-bold text-sm shadow-2xs active:scale-95">-</button>
-                <input type="number" step="any" value="${it.actualQty}" onchange="setExactQty(${idx}, this.value)" class="w-11 text-center bg-transparent text-xs font-bold text-[#005288] focus:outline-none">
-                <button type="button" onclick="adjustQty(${idx}, 1)" class="w-7 h-7 rounded-full bg-[#0071BA] text-white font-bold text-sm shadow-2xs active:scale-95">+</button>
+                <input type="number" step="any" value="${it.actualQty}" onchange="setExactQty(${idx}, this.value)" class="w-11 text-center bg-transparent text-xs font-bold ${qtyTextCls} focus:outline-none">
+                <button type="button" onclick="adjustQty(${idx}, 1)" class="w-7 h-7 rounded-full ${plusBtnCls} font-bold text-sm shadow-2xs active:scale-95">+</button>
               </div>
             </div>
           </div>`;
       }).join('');
+
+      updateDetailHeaderStatusLive();
       updateSubmitButtonState();
     }
 
-    function toggleItemCheck(idx) { state.draftItems[idx].checked = !state.draftItems[idx].checked; renderDetailItems(); }
-    function toggleCheckAll() { const allChecked = state.draftItems.every(it => it.checked); state.draftItems.forEach(it => { it.checked = !allChecked; }); renderDetailItems(); }
-    function adjustQty(idx, delta) { state.draftItems[idx].actualQty = Math.max(0, Number((state.draftItems[idx].actualQty + delta).toFixed(2))); state.draftItems[idx].checked = true; renderDetailItems(); }
-    function setExactQty(idx, val) { const num = parseFloat(val); state.draftItems[idx].actualQty = isNaN(num) || num < 0 ? 0 : num; state.draftItems[idx].checked = true; renderDetailItems(); }
+    function toggleItemCheck(idx) {
+      const item = state.draftItems[idx];
+      const isModified = Math.abs(item.actualQty - item.orderQty) > 0.0001;
+      // หากมีการแก้จำนวนไม่ตรงยอดสั่ง ให้คงสถานะ checked เพื่อให้แสดงสีแดงต่อเนื่อง
+      if (isModified) {
+        item.checked = true;
+      } else {
+        item.checked = !item.checked;
+      }
+      renderDetailItems();
+    }
 
-    function setReceiveMode(mode) {
-      state.receiveMode = mode;
-      document.getElementById('modeFullBtn').className = mode === 'RECEIVED'
-        ? 'py-2 px-2.5 rounded-xl text-xs font-bold border border-[#0071BA] bg-[#0071BA] text-white'
-        : 'py-2 px-2.5 rounded-xl text-xs font-bold border border-[#b2e0fb] bg-white text-[#005288]';
-      document.getElementById('modePartialBtn').className = mode === 'PARTIAL'
-        ? 'py-2 px-2.5 rounded-xl text-xs font-bold border border-[#fd7100] bg-[#fd7100] text-white'
-        : 'py-2 px-2.5 rounded-xl text-xs font-bold border border-[#b2e0fb] bg-white text-[#005288]';
+    function toggleCheckAll() {
+      const allChecked = state.draftItems.every(it => it.checked);
+      state.draftItems.forEach(it => {
+        const isModified = Math.abs(it.actualQty - it.orderQty) > 0.0001;
+        it.checked = isModified ? true : !allChecked;
+      });
+      renderDetailItems();
+    }
+
+    function adjustQty(idx, delta) {
+      state.draftItems[idx].actualQty = Math.max(0, Number((state.draftItems[idx].actualQty + delta).toFixed(2)));
+      state.draftItems[idx].checked = true;
+      renderDetailItems();
+    }
+
+    function setExactQty(idx, val) {
+      const num = parseFloat(val);
+      state.draftItems[idx].actualQty = isNaN(num) || num < 0 ? 0 : num;
+      state.draftItems[idx].checked = true;
+      renderDetailItems();
     }
 
     function totalPhotoCount() { return state.newPhotos.length + state.existingPhotoUrls.length; }
@@ -686,6 +792,7 @@
       const btn = document.getElementById('btnConfirmSubmit');
       const countPhotos = totalPhotoCount();
       const allChecked = state.draftItems.length > 0 && state.draftItems.every(it => it.checked);
+      const hasDiff = hasAnyDiscrepancyInDraft();
 
       if (countPhotos === 0) {
         btn.disabled = true;
@@ -700,9 +807,15 @@
         btn.className = 'w-full py-3 rounded-xl text-sm font-bold bg-slate-300 text-slate-600 cursor-not-allowed';
         return;
       }
+
       btn.disabled = false;
-      btn.textContent = '✅ ยืนยันการรับสินค้า';
-      btn.className = 'w-full py-3 rounded-xl text-sm font-bold bg-[#005288] hover:bg-[#0071BA] text-white shadow-md active:scale-99 transition';
+      if (hasDiff) {
+        btn.textContent = '⚠️ ยืนยันการรับสินค้า (พบยอดไม่ตรง / ไม่ครบ)';
+        btn.className = 'w-full py-3 rounded-xl text-sm font-bold bg-[#D32F2F] hover:bg-red-700 text-white shadow-md active:scale-99 transition';
+      } else {
+        btn.textContent = '✅ ยืนยันรับสินค้าครบทุกรายการ';
+        btn.className = 'w-full py-3 rounded-xl text-sm font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-md active:scale-99 transition';
+      }
     }
 
     function openDoModal() { renderModalThumbnails(); document.getElementById('doModal').classList.remove('hidden'); }
@@ -831,7 +944,7 @@
       box.classList.remove('hidden');
       document.getElementById('ocrSummaryTitle').textContent = `✨ สแกนและกรอกยอดอัตโนมัติ ${matchedCount} รายการ`;
       const doText = state.detectedDoNumbers.length ? `เลขที่ DO: ${state.detectedDoNumbers.join(', ')}` : '';
-      const warnText = Array.isArray(res.warnings) && res.warnings.length ? res.warnings.join(' • ') : 'ตรวจสอบยอดในรายการแล้วกดปิดหน้าต่างนี้ได้เลย';
+      const warnText = Array.isArray(res.warnings) && res.warnings.length ? res.warnings.join(' • ') : 'รายการที่ยอดตรงขึ้นสีเขียว ส่วนรายการที่ไม่ตรงขึ้นสีแดงอัตโนมัติ';
       document.getElementById('ocrSummaryBody').innerHTML = `
         ${doText ? `<div class="font-semibold text-[#0071BA]">${escapeHtml(doText)}</div>` : ''}
         <div>${escapeHtml(warnText)}</div>`;
@@ -844,6 +957,9 @@
       btn.disabled = true;
       btn.textContent = 'กำลังบันทึกข้อมูลและอัปโหลดรูป DO...';
 
+      const hasDiff = hasAnyDiscrepancyInDraft();
+      const autoStatus = hasDiff ? 'ISSUE' : 'RECEIVED';
+
       const payload = {
         lineUserId: state.user.lineUserId,
         inspectorName: state.user.name,
@@ -852,7 +968,6 @@
         deliveryDateIso: state.activeRound.deliveryDateIso,
         weekLabel: state.activeRound.weekLabel,
         displayDate: state.activeRound.displayDate,
-        receiveMode: state.receiveMode,
         remark: document.getElementById('remarkInput').value.trim(),
         doNumbers: state.detectedDoNumbers.join(', '),
         photos: state.newPhotos.map(p => ({ base64: p.base64, mimeType: p.mimeType })),
@@ -862,17 +977,22 @@
 
       try {
         const res = await callGasApi('submitOrderReceiving', { payload: payload });
-        state.activeRound.status = res.status;
+        const finalStatus = res.status || autoStatus;
+        state.activeRound.status = finalStatus;
         state.activeRound.log = {
           timestamp: res.timestamp,
-          status: res.status,
+          status: finalStatus,
           inspectorName: res.inspectorName,
+          hasDiscrepancy: hasDiff,
           remark: payload.remark,
           doNumbers: payload.doNumbers,
           photoUrls: res.photoUrls,
           items: state.draftItems
         };
-        showToast(res.emailSent ? 'บันทึกสำเร็จ และส่ง Email แจ้งปัญหาแล้ว' : 'บันทึกการรับสินค้าสำเร็จ');
+        showToast(
+          res.emailSent ? 'บันทึกสำเร็จ และส่ง Email แจ้งปัญหาแล้ว' : 'บันทึกการรับสินค้าครบถ้วนแล้ว',
+          finalStatus === 'ISSUE'
+        );
         goBackView();
       } catch (err) {
         updateSubmitButtonState();
@@ -888,7 +1008,7 @@
     function showToast(msg, isError) {
       const box = document.getElementById('toastBox');
       box.textContent = msg;
-      box.className = `fixed top-16 left-1/2 -translate-x-1/2 z-50 text-white text-xs font-semibold px-4 py-2.5 rounded-full shadow-lg ${isError ? 'bg-[#D32F2F]' : 'bg-[#005288]'}`;
+      box.className = `fixed top-16 left-1/2 -translate-x-1/2 z-50 text-white text-xs font-semibold px-4 py-2.5 rounded-full shadow-lg ${isError ? 'bg-[#D32F2F]' : 'bg-emerald-600'}`;
       box.classList.remove('hidden');
       setTimeout(() => box.classList.add('hidden'), 3200);
     }
