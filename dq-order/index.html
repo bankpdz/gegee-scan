@@ -21,6 +21,24 @@
       background: #fd7100; box-shadow: 0 0 12px #fd7100;
       animation: scanBeam 1.8s infinite ease-in-out;
     }
+
+    /* รอบที่ยังไม่มีรายการสั่ง -> สีเทาอ่อน สถานะ รอสั่งของ */
+    .round-waiting-card {
+      background-color: #f1f5f9;
+      border: 1.5px dashed #cbd5e1;
+      opacity: 0.92;
+    }
+
+    /* รอบที่งดรอบ (Void,pzd021) -> สีเทาเข้ม มีขีดฆ่า */
+    .round-void-card {
+      background-color: #334155;
+      border: 1.5px solid #1e293b;
+    }
+    .round-void-strike {
+      text-decoration: line-through;
+      text-decoration-thickness: 2px;
+      text-decoration-color: #cbd5e1;
+    }
   </style>
 </head>
 <body class="min-h-screen pb-28">
@@ -163,7 +181,7 @@
     <!-- รายการสินค้า (สีเขียวเมื่อรับครบ / สีแดงเมื่อแก้ไขยอดไม่ครบหรือเกิน) -->
     <div id="itemsContainer" class="space-y-2.5"></div>
 
-    <!-- ฟอร์มผู้ตรวจรับและหมายเหตุ (ตัดตัวเลือกรูปแบบการรับสินค้าออกแล้ว) -->
+    <!-- ฟอร์มผู้ตรวจรับและหมายเหตุ -->
     <div class="bg-white border border-[#b2e0fb] rounded-2xl p-3.5 shadow-sm space-y-3">
       <div>
         <label class="block text-xs font-bold text-[#005288] mb-1">ผู้ตรวจรับ (ดึงอัตโนมัติตามบัญชี LINE)</label>
@@ -238,7 +256,7 @@
   </div>
 
   <!-- Toast -->
-  <div id="toastBox" class="hidden fixed top-16 left-1/2 -translate-x-1/2 z-50 bg-[#005288] text-white text-xs font-semibold px-4 py-2.5 rounded-full shadow-lg"></div>
+  <div id="toastBox" class="hidden fixed top-16 left-1/2 -translate-x-1/2 z-50 bg-[#005288] text-white text-xs font-semibold px-4 py-2.5 rounded-full shadow-lg text-center max-w-[90vw]"></div>
 
   <script>
     const LIFF_ID = '2012520828-rhinGNIQ';
@@ -341,11 +359,20 @@
         renderCategoryTabs();
 
         if (dlBranch && state.branches.includes(dlBranch)) {
+          if (dlDate && dlDate.length >= 7) {
+            const dlMonth = dlDate.slice(0, 7);
+            if (state.months.includes(dlMonth)) {
+              state.selectedMonth = dlMonth;
+              document.getElementById('monthSelect').value = dlMonth;
+            }
+          }
           chooseBranchFromPicker(dlBranch, false);
           if (dlDate) {
             const targetKey = `${dlBranch}|${state.selectedCategory}|${dlDate}`;
             const found = state.rounds.find(r => r.roundKey === targetKey);
-            if (found) openRoundDetail(found.roundKey);
+            if (found && found.status !== 'WAITING_ORDER' && found.status !== 'VOID') {
+              openRoundDetail(found.roundKey);
+            }
           }
           return;
         }
@@ -374,18 +401,25 @@
 
     function renderBranchPickerCards() {
       const grid = document.getElementById('branchPickerGrid');
+      const targetMonth = state.selectedMonth;
+
       grid.innerHTML = state.branches.map(b => {
         const branchName = state.branchMeta[b] || '';
-        const branchRounds = state.rounds.filter(r => r.branch === b);
-        const issueCount = branchRounds.filter(r => r.status === 'ISSUE' || r.status === 'PARTIAL').length;
-        const unreceivedCount = branchRounds.filter(r => r.status === 'PENDING' || r.status === 'LATE').length;
-        const lateCount = branchRounds.filter(r => r.status === 'LATE').length;
+        const branchRounds = state.rounds.filter(r => r.branch === b && (!targetMonth || r.monthKey === targetMonth));
+
+        // นับเฉพาะรอบที่มีรายการสั่งจริง (ไม่นำรอบ WAITING_ORDER และ VOID มานับเป็นค้างรับหรือรับครบหลอก)
+        const actionableRounds = branchRounds.filter(r => r.status !== 'WAITING_ORDER' && r.status !== 'VOID');
+        const issueCount = actionableRounds.filter(r => r.status === 'ISSUE' || r.status === 'PARTIAL').length;
+        const unreceivedCount = actionableRounds.filter(r => r.status === 'PENDING' || r.status === 'LATE').length;
+        const lateCount = actionableRounds.filter(r => r.status === 'LATE').length;
+        const waitingCount = branchRounds.filter(r => r.status === 'WAITING_ORDER').length;
+        const voidCount = branchRounds.filter(r => r.status === 'VOID').length;
 
         let badgeHtml = `<span class="text-[11px] font-bold px-2.5 py-1 rounded-full bg-emerald-600 text-white shadow-2xs">รับครบทุกรอบ</span>`;
         let cardBorderCls = 'border-[#b2e0fb] hover:border-[#0071BA]';
 
         if (branchRounds.length === 0) {
-          badgeHtml = `<span class="text-[11px] font-medium px-2.5 py-1 rounded-full bg-slate-100 text-slate-500">ยังไม่มีออเดอร์</span>`;
+          badgeHtml = `<span class="text-[11px] font-medium px-2.5 py-1 rounded-full bg-slate-100 text-slate-500">ไม่มีตารางส่ง</span>`;
         } else if (issueCount > 0) {
           badgeHtml = `<span class="text-[11px] font-bold px-2.5 py-1 rounded-full bg-[#D32F2F] text-white shadow-2xs">ไม่ครบ/แก้ยอด ${issueCount} รอบ</span>`;
           cardBorderCls = 'border-red-300 hover:border-[#D32F2F]';
@@ -393,6 +427,10 @@
           badgeHtml = `<span class="text-[11px] font-bold px-2.5 py-1 rounded-full bg-red-50 text-[#D32F2F] border border-red-200">เลยกำหนด ${lateCount} รอบ</span>`;
         } else if (unreceivedCount > 0) {
           badgeHtml = `<span class="text-[11px] font-bold px-2.5 py-1 rounded-full bg-[#f0f8ff] text-[#0071BA] border border-[#b2e0fb]">รอรับ ${unreceivedCount} รอบ</span>`;
+        } else if (actionableRounds.length === 0 && waitingCount > 0) {
+          badgeHtml = `<span class="text-[11px] font-semibold px-2.5 py-1 rounded-full bg-slate-200 text-slate-600">รอสั่งของ</span>`;
+        } else if (actionableRounds.length === 0 && voidCount > 0) {
+          badgeHtml = `<span class="text-[11px] font-semibold px-2.5 py-1 rounded-full bg-slate-700 text-slate-200">งดรอบส่ง</span>`;
         }
 
         return `
@@ -402,7 +440,7 @@
                 <span class="text-base font-bold text-[#005288]">DQ${escapeHtml(b)}</span>
                 ${branchName ? `<span class="text-xs font-medium text-slate-600">• ${escapeHtml(branchName)}</span>` : ''}
               </div>
-              <div class="text-[11px] text-[#0071BA] mt-1">แตะเพื่อเข้าดูรอบส่งของเย็น / ของแห้ง ›</div>
+              <div class="text-[11px] text-[#0071BA] mt-1">แตะเพื่อเข้าดูรอบส่งทั้งเดือน (ของเย็น / ของแห้ง) ›</div>
             </div>
             <div class="shrink-0">${badgeHtml}</div>
           </button>`;
@@ -443,12 +481,16 @@
       }
 
       const mSel = document.getElementById('monthSelect');
+      const now = new Date();
+      const currentYm = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
       if (state.months.length === 0) {
-        const now = new Date();
-        state.months = [`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`];
+        state.months = [currentYm];
       }
       mSel.innerHTML = state.months.map(m => `<option value="${m}">${formatThaiMonthLabel(m)}</option>`).join('');
-      state.selectedMonth = state.months[0] || '';
+
+      // ตั้งค่าเริ่มต้นเป็นเดือนปัจจุบันหากมีในรายการ มิฉะนั้นใช้เดือนล่าสุด
+      state.selectedMonth = state.months.includes(currentYm) ? currentYm : (state.months[0] || '');
+      mSel.value = state.selectedMonth;
     }
 
     function formatThaiMonthLabel(yyyyMm) {
@@ -492,48 +534,77 @@
     }
 
     /**
-     * กำหนดสีสถานะรอบส่ง:
-     * - รับครบ -> สีเขียว (RECEIVED)
-     * - ไม่ครบ / มีการแก้ไขจำนวน -> สีแดง (ISSUE / PARTIAL)
+     * กำหนดสีและรูปแบบสถานะรอบส่งทั้งเดือน:
+     * - WAITING_ORDER -> สีเทาอ่อน สถานะ "รอสั่งของ" (ยังไม่มีรายการสั่ง)
+     * - VOID -> สีเทาเข้ม มีขีดฆ่า สถานะ "ไม่มีการสั่งของ" (เช่น ช่องบันทึกอื่นๆ ขึ้น Void,pzd021)
+     * - RECEIVED -> สีเขียว รับครบ
+     * - ISSUE / PARTIAL -> สีแดง รับไม่ครบ / แก้ไขยอด
+     * - LATE / PENDING -> มีออเดอร์แล้ว รอตรวจรับ
      */
     function getStatusMeta(status) {
+      if (status === 'WAITING_ORDER') {
+        return {
+          text: 'รอสั่งของ',
+          badgeCls: 'bg-slate-200 text-slate-600 border border-slate-300',
+          cardCls: 'round-waiting-card cursor-default',
+          titleCls: 'text-slate-500',
+          subLeftCls: 'text-slate-400',
+          actionText: 'รอเข้าระบบ',
+          actionCls: 'text-slate-400 font-medium'
+        };
+      }
+      if (status === 'VOID') {
+        return {
+          text: 'ไม่มีการสั่งของ',
+          badgeCls: 'bg-slate-900 text-slate-200 border border-slate-600',
+          cardCls: 'round-void-card cursor-not-allowed',
+          titleCls: 'text-slate-200 round-void-strike',
+          subLeftCls: 'text-slate-300 round-void-strike',
+          actionText: 'งดรอบส่ง',
+          actionCls: 'text-slate-300 font-semibold'
+        };
+      }
       if (status === 'RECEIVED') {
         return {
           text: '✓ ตรวจรับครบแล้ว',
           badgeCls: 'bg-emerald-600 text-white shadow-2xs',
-          cardCls: 'bg-emerald-50/70 border-2 border-emerald-500 hover:border-emerald-600',
+          cardCls: 'bg-emerald-50/70 border-2 border-emerald-500 hover:border-emerald-600 active:scale-[0.99]',
           titleCls: 'text-emerald-900',
+          subLeftCls: 'text-[#0071BA]',
           actionText: 'ดูรายการรับแล้ว ›',
-          actionCls: 'text-emerald-700'
+          actionCls: 'text-emerald-700 font-bold'
         };
       }
       if (status === 'ISSUE' || status === 'PARTIAL') {
         return {
           text: '✕ รับไม่ครบ / แก้ไขยอด',
           badgeCls: 'bg-[#D32F2F] text-white shadow-2xs',
-          cardCls: 'bg-red-50/70 border-2 border-[#D32F2F] hover:border-red-700',
+          cardCls: 'bg-red-50/70 border-2 border-[#D32F2F] hover:border-red-700 active:scale-[0.99]',
           titleCls: 'text-[#D32F2F]',
+          subLeftCls: 'text-[#0071BA]',
           actionText: 'ตรวจสอบ / แก้ไข ›',
-          actionCls: 'text-[#D32F2F]'
+          actionCls: 'text-[#D32F2F] font-bold'
         };
       }
       if (status === 'LATE') {
         return {
           text: 'เลยกำหนดรับ',
           badgeCls: 'bg-red-100 text-[#D32F2F] border border-red-300',
-          cardCls: 'bg-white border border-red-300 hover:border-[#D32F2F]',
+          cardCls: 'bg-white border border-red-300 hover:border-[#D32F2F] active:scale-[0.99]',
           titleCls: 'text-[#005288]',
+          subLeftCls: 'text-[#0071BA]',
           actionText: 'เปิดตรวจรับ ›',
-          actionCls: 'text-[#D32F2F]'
+          actionCls: 'text-[#D32F2F] font-bold'
         };
       }
       return {
         text: 'รอตรวจรับ',
         badgeCls: 'bg-[#f0f8ff] text-[#0071BA] border border-[#b2e0fb]',
-        cardCls: 'bg-white border border-[#b2e0fb] hover:border-[#0071BA]',
+        cardCls: 'bg-white border border-[#b2e0fb] hover:border-[#0071BA] active:scale-[0.99]',
         titleCls: 'text-[#005288]',
+        subLeftCls: 'text-[#0071BA]',
         actionText: 'เปิดตรวจรับ ›',
-        actionCls: 'text-[#005288]'
+        actionCls: 'text-[#005288] font-bold'
       };
     }
 
@@ -548,26 +619,34 @@
       if (filtered.length === 0) {
         container.innerHTML = `
           <div class="bg-white border border-[#b2e0fb] rounded-2xl p-8 text-center">
-            <p class="text-xs font-semibold text-[#005288]">ไม่มีรอบส่งสินค้าในเดือนและหมวดที่เลือก (สาขา DQ${escapeHtml(state.selectedBranch)})</p>
+            <p class="text-xs font-semibold text-[#005288]">ไม่มีตารางรอบส่งสินค้าในเดือนและหมวดที่เลือก (สาขา DQ${escapeHtml(state.selectedBranch)})</p>
           </div>`;
         return;
       }
 
       container.innerHTML = filtered.map(r => {
         const st = getStatusMeta(r.status);
-        const inspectorInfo = r.log
+
+        let leftDetailText = `${r.items.length} รายการ`;
+        if (r.status === 'WAITING_ORDER') {
+          leftDetailText = 'ยังไม่มีรายการสั่ง';
+        } else if (r.status === 'VOID') {
+          leftDetailText = r.voidNote ? `งดรอบ (${r.voidNote})` : 'ไม่มีรายการสั่งของ';
+        }
+
+        const inspectorInfo = (r.log && r.status !== 'VOID' && r.status !== 'WAITING_ORDER')
           ? `<div class="text-[11px] text-slate-600 mt-1.5 pt-1.5 border-t border-slate-200/70">ตรวจรับโดย: <strong class="text-[#005288]">${escapeHtml(r.log.inspectorName)}</strong> • ${escapeHtml(r.log.timestamp)}</div>`
           : '';
 
         return `
-          <button onclick="openRoundDetail('${r.roundKey}')" class="w-full text-left ${st.cardCls} rounded-2xl p-3.5 shadow-xs active:scale-[0.99] transition block">
+          <button type="button" onclick="openRoundDetail('${r.roundKey}')" class="w-full text-left ${st.cardCls} rounded-2xl p-3.5 shadow-xs transition block">
             <div class="flex items-center justify-between gap-2">
               <div class="text-sm font-bold ${st.titleCls}">${escapeHtml(r.displayHeader)}</div>
-              <span class="text-[11px] font-bold px-2.5 py-0.5 rounded-full ${st.badgeCls}">${st.text}</span>
+              <span class="text-[11px] font-bold px-2.5 py-0.5 rounded-full shrink-0 ${st.badgeCls}">${st.text}</span>
             </div>
-            <div class="flex items-center justify-between mt-1.5">
-              <span class="text-xs font-medium text-[#0071BA]">${r.items.length} รายการ</span>
-              <span class="text-xs font-bold ${st.actionCls}">${st.actionText}</span>
+            <div class="flex items-center justify-between mt-1.5 gap-2">
+              <span class="text-xs font-medium ${st.subLeftCls}">${escapeHtml(leftDetailText)}</span>
+              <span class="text-xs shrink-0 ${st.actionCls}">${st.actionText}</span>
             </div>
             ${inspectorInfo}
           </button>`;
@@ -584,6 +663,17 @@
     function openRoundDetail(roundKey) {
       const round = state.rounds.find(r => r.roundKey === roundKey);
       if (!round) return;
+
+      // ป้องกันการกดเข้าหน้ารับของสำหรับรอบที่ยังรอสั่งของ หรือรอบที่ถูก Void งดส่ง
+      if (round.status === 'WAITING_ORDER') {
+        showToast('รอบส่งนี้ยังไม่มีรายการสั่งในระบบ (สถานะ: รอสั่งของ)', true);
+        return;
+      }
+      if (round.status === 'VOID') {
+        const noteSuffix = round.voidNote ? ` [${round.voidNote}]` : '';
+        showToast(`รอบส่งนี้งดรอบ ไม่มีการสั่งของ${noteSuffix}`, true);
+        return;
+      }
 
       state.activeRound = round;
       state.newPhotos = [];
@@ -663,12 +753,6 @@
       }
     }
 
-    /**
-     * แสดงผลการ์ดสินค้าแต่ละรายการ:
-     * - หากมีการแก้ไขจำนวนไม่ตรงยอดสั่ง (ขาด/เกิน) -> การ์ดสีแดง + ปุ่มติ๊กสีแดง
-     * - หากติ๊กแล้วและจำนวนครบตรงยอดสั่ง -> การ์ดสีเขียว + ปุ่มติ๊กสีเขียว
-     * - หากยังไม่ติ๊กและยังไม่ได้แก้ยอด -> สีปกติ (ฟ้าอ่อน)
-     */
     function renderDetailItems() {
       const container = document.getElementById('itemsContainer');
       container.innerHTML = state.draftItems.map((it, idx) => {
@@ -685,7 +769,6 @@
         let diffBadge = '';
 
         if (isModified) {
-          // ไม่ครบ หรือมีการแก้ไขจำนวน -> สีแดงทันที
           cardThemeCls = 'bg-red-50/75 border-2 border-[#D32F2F]';
           checkBtnCls = 'bg-[#D32F2F] border-[#D32F2F] text-white';
           checkIcon = '!';
@@ -699,7 +782,6 @@
             diffBadge = `<span class="inline-block mt-1 text-[10px] font-bold px-2 py-0.5 rounded-md bg-[#D32F2F] text-white">แก้ไขยอด เกิน +${diff} (สั่ง ${it.orderQty})</span>`;
           }
         } else if (it.checked) {
-          // กดตรวจรับแล้ว และยอดครบ -> สีเขียว
           cardThemeCls = 'bg-emerald-50/75 border-2 border-emerald-500';
           checkBtnCls = 'bg-emerald-600 border-emerald-600 text-white';
           checkIcon = '✓';
@@ -740,7 +822,6 @@
     function toggleItemCheck(idx) {
       const item = state.draftItems[idx];
       const isModified = Math.abs(item.actualQty - item.orderQty) > 0.0001;
-      // หากมีการแก้จำนวนไม่ตรงยอดสั่ง ให้คงสถานะ checked เพื่อให้แสดงสีแดงต่อเนื่อง
       if (isModified) {
         item.checked = true;
       } else {
@@ -869,8 +950,8 @@
       grid.classList.remove('hidden');
 
       const existingHtml = state.existingPhotoUrls.map((url, idx) => `
-        <div class="relative rounded-xl overflow-hidden border border-[#b2e0fb] bg-white h-24 flex items-center justify-center p-2 text-center">
-          <a href="${url}" target="_blank" class="text-[11px] font-semibold text-[#0071BA] underline">รูปเดิม #${idx + 1}</a>
+        <div class="relative rounded-xl overflow-hidden border border-[#b2e0fb] bg-white h-24 flex flex-col items-center justify-center p-2 text-center">
+          <a href="${url}" target="_blank" rel="noopener" class="text-[11px] font-semibold text-[#0071BA] underline">📄 ดูรูปเดิม #${idx + 1}</a>
           <button type="button" onclick="removeExistingPhoto(${idx})" class="absolute top-1 right-1 w-5 h-5 rounded-full bg-[#D32F2F] text-white text-[10px] font-bold">✕</button>
         </div>`).join('');
 
@@ -1008,7 +1089,7 @@
     function showToast(msg, isError) {
       const box = document.getElementById('toastBox');
       box.textContent = msg;
-      box.className = `fixed top-16 left-1/2 -translate-x-1/2 z-50 text-white text-xs font-semibold px-4 py-2.5 rounded-full shadow-lg ${isError ? 'bg-[#D32F2F]' : 'bg-emerald-600'}`;
+      box.className = `fixed top-16 left-1/2 -translate-x-1/2 z-50 text-white text-xs font-semibold px-4 py-2.5 rounded-full shadow-lg text-center max-w-[90vw] ${isError ? 'bg-[#D32F2F]' : 'bg-emerald-600'}`;
       box.classList.remove('hidden');
       setTimeout(() => box.classList.add('hidden'), 3200);
     }
