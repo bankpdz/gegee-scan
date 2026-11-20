@@ -22,17 +22,21 @@
       animation: scanBeam 1.8s infinite ease-in-out;
     }
 
-    /* รอบที่ยังไม่มีรายการสั่ง -> สีเทาอ่อน สถานะ รอสั่งของ */
+    /* รอบที่ยังไม่มีการสั่งของ (ไม่มีรอบการสั่งของขึ้นในเว็บ) -> สีเทาอ่อน สถานะ รอสั่งสินค้า ล็อกห้ามกด */
     .round-waiting-card {
       background-color: #f1f5f9;
       border: 1.5px dashed #cbd5e1;
-      opacity: 0.92;
+      opacity: 0.9;
+      pointer-events: none;
+      user-select: none;
     }
 
-    /* รอบที่งดรอบ (Void,pzd021) -> สีเทาเข้ม มีขีดฆ่า */
+    /* รอบที่งดรอบ (Void,pzd021) -> สีเทาเข้ม มีขีดฆ่า ล็อกห้ามกด */
     .round-void-card {
       background-color: #334155;
       border: 1.5px solid #1e293b;
+      pointer-events: none;
+      user-select: none;
     }
     .round-void-strike {
       text-decoration: line-through;
@@ -178,10 +182,8 @@
       </button>
     </div>
 
-    <!-- รายการสินค้า (สีเขียวเมื่อรับครบ / สีแดงเมื่อแก้ไขยอดไม่ครบหรือเกิน) -->
     <div id="itemsContainer" class="space-y-2.5"></div>
 
-    <!-- ฟอร์มผู้ตรวจรับและหมายเหตุ -->
     <div class="bg-white border border-[#b2e0fb] rounded-2xl p-3.5 shadow-sm space-y-3">
       <div>
         <label class="block text-xs font-bold text-[#005288] mb-1">ผู้ตรวจรับ (ดึงอัตโนมัติตามบัญชี LINE)</label>
@@ -370,7 +372,7 @@
           if (dlDate) {
             const targetKey = `${dlBranch}|${state.selectedCategory}|${dlDate}`;
             const found = state.rounds.find(r => r.roundKey === targetKey);
-            if (found && found.status !== 'WAITING_ORDER' && found.status !== 'VOID') {
+            if (found && found.status !== 'WAITING_ORDER' && found.status !== 'VOID' && found.items.length > 0) {
               openRoundDetail(found.roundKey);
             }
           }
@@ -407,7 +409,6 @@
         const branchName = state.branchMeta[b] || '';
         const branchRounds = state.rounds.filter(r => r.branch === b && (!targetMonth || r.monthKey === targetMonth));
 
-        // นับเฉพาะรอบที่มีรายการสั่งจริง (ไม่นำรอบ WAITING_ORDER และ VOID มานับเป็นค้างรับหรือรับครบหลอก)
         const actionableRounds = branchRounds.filter(r => r.status !== 'WAITING_ORDER' && r.status !== 'VOID');
         const issueCount = actionableRounds.filter(r => r.status === 'ISSUE' || r.status === 'PARTIAL').length;
         const unreceivedCount = actionableRounds.filter(r => r.status === 'PENDING' || r.status === 'LATE').length;
@@ -419,7 +420,7 @@
         let cardBorderCls = 'border-[#b2e0fb] hover:border-[#0071BA]';
 
         if (branchRounds.length === 0) {
-          badgeHtml = `<span class="text-[11px] font-medium px-2.5 py-1 rounded-full bg-slate-100 text-slate-500">ไม่มีตารางส่ง</span>`;
+          badgeHtml = `<span class="text-[11px] font-medium px-2.5 py-1 rounded-full bg-slate-200 text-slate-600">รอสั่งสินค้า</span>`;
         } else if (issueCount > 0) {
           badgeHtml = `<span class="text-[11px] font-bold px-2.5 py-1 rounded-full bg-[#D32F2F] text-white shadow-2xs">ไม่ครบ/แก้ยอด ${issueCount} รอบ</span>`;
           cardBorderCls = 'border-red-300 hover:border-[#D32F2F]';
@@ -428,9 +429,9 @@
         } else if (unreceivedCount > 0) {
           badgeHtml = `<span class="text-[11px] font-bold px-2.5 py-1 rounded-full bg-[#f0f8ff] text-[#0071BA] border border-[#b2e0fb]">รอรับ ${unreceivedCount} รอบ</span>`;
         } else if (actionableRounds.length === 0 && waitingCount > 0) {
-          badgeHtml = `<span class="text-[11px] font-semibold px-2.5 py-1 rounded-full bg-slate-200 text-slate-600">รอสั่งของ</span>`;
+          badgeHtml = `<span class="text-[11px] font-semibold px-2.5 py-1 rounded-full bg-slate-200 text-slate-600">รอสั่งสินค้า</span>`;
         } else if (actionableRounds.length === 0 && voidCount > 0) {
-          badgeHtml = `<span class="text-[11px] font-semibold px-2.5 py-1 rounded-full bg-slate-700 text-slate-200">งดรอบส่ง</span>`;
+          badgeHtml = `<span class="text-[11px] font-semibold px-2.5 py-1 rounded-full bg-slate-700 text-slate-200">ไม่มีการสั่งของ</span>`;
         }
 
         return `
@@ -488,7 +489,6 @@
       }
       mSel.innerHTML = state.months.map(m => `<option value="${m}">${formatThaiMonthLabel(m)}</option>`).join('');
 
-      // ตั้งค่าเริ่มต้นเป็นเดือนปัจจุบันหากมีในรายการ มิฉะนั้นใช้เดือนล่าสุด
       state.selectedMonth = state.months.includes(currentYm) ? currentYm : (state.months[0] || '');
       mSel.value = state.selectedMonth;
     }
@@ -533,35 +533,27 @@
       }
     }
 
-    /**
-     * กำหนดสีและรูปแบบสถานะรอบส่งทั้งเดือน:
-     * - WAITING_ORDER -> สีเทาอ่อน สถานะ "รอสั่งของ" (ยังไม่มีรายการสั่ง)
-     * - VOID -> สีเทาเข้ม มีขีดฆ่า สถานะ "ไม่มีการสั่งของ" (เช่น ช่องบันทึกอื่นๆ ขึ้น Void,pzd021)
-     * - RECEIVED -> สีเขียว รับครบ
-     * - ISSUE / PARTIAL -> สีแดง รับไม่ครบ / แก้ไขยอด
-     * - LATE / PENDING -> มีออเดอร์แล้ว รอตรวจรับ
-     */
     function getStatusMeta(status) {
       if (status === 'WAITING_ORDER') {
         return {
-          text: 'รอสั่งของ',
+          text: 'รอสั่งสินค้า',
           badgeCls: 'bg-slate-200 text-slate-600 border border-slate-300',
-          cardCls: 'round-waiting-card cursor-default',
+          cardCls: 'round-waiting-card',
           titleCls: 'text-slate-500',
           subLeftCls: 'text-slate-400',
-          actionText: 'รอเข้าระบบ',
-          actionCls: 'text-slate-400 font-medium'
+          actionText: '',
+          actionCls: ''
         };
       }
       if (status === 'VOID') {
         return {
           text: 'ไม่มีการสั่งของ',
           badgeCls: 'bg-slate-900 text-slate-200 border border-slate-600',
-          cardCls: 'round-void-card cursor-not-allowed',
+          cardCls: 'round-void-card',
           titleCls: 'text-slate-200 round-void-strike',
           subLeftCls: 'text-slate-300 round-void-strike',
-          actionText: 'งดรอบส่ง',
-          actionCls: 'text-slate-300 font-semibold'
+          actionText: '',
+          actionCls: ''
         };
       }
       if (status === 'RECEIVED') {
@@ -626,17 +618,32 @@
 
       container.innerHTML = filtered.map(r => {
         const st = getStatusMeta(r.status);
+        const isLocked = (r.status === 'WAITING_ORDER' || r.status === 'VOID' || r.items.length === 0);
 
         let leftDetailText = `${r.items.length} รายการ`;
         if (r.status === 'WAITING_ORDER') {
-          leftDetailText = 'ยังไม่มีรายการสั่ง';
+          leftDetailText = 'ยังไม่มีรอบการสั่งของในระบบ';
         } else if (r.status === 'VOID') {
-          leftDetailText = r.voidNote ? `งดรอบ (${r.voidNote})` : 'ไม่มีรายการสั่งของ';
+          leftDetailText = r.voidNote ? `งดรอบ (${r.voidNote})` : 'ไม่มีการสั่งของ';
         }
 
-        const inspectorInfo = (r.log && r.status !== 'VOID' && r.status !== 'WAITING_ORDER')
+        const inspectorInfo = (r.log && !isLocked)
           ? `<div class="text-[11px] text-slate-600 mt-1.5 pt-1.5 border-t border-slate-200/70">ตรวจรับโดย: <strong class="text-[#005288]">${escapeHtml(r.log.inspectorName)}</strong> • ${escapeHtml(r.log.timestamp)}</div>`
           : '';
+
+        // รอบที่รอสั่งสินค้า (WAITING_ORDER) หรืองดรอบ (VOID) เรนเดอร์เป็นกล่องล็อกตายตัว กดเข้าไปดูไม่ได้
+        if (isLocked) {
+          return `
+            <div aria-disabled="true" class="w-full text-left ${st.cardCls} rounded-2xl p-3.5 block">
+              <div class="flex items-center justify-between gap-2">
+                <div class="text-sm font-bold ${st.titleCls}">${escapeHtml(r.displayHeader)}</div>
+                <span class="text-[11px] font-bold px-2.5 py-0.5 rounded-full shrink-0 ${st.badgeCls}">${st.text}</span>
+              </div>
+              <div class="flex items-center justify-between mt-1.5 gap-2">
+                <span class="text-xs font-medium ${st.subLeftCls}">${escapeHtml(leftDetailText)}</span>
+              </div>
+            </div>`;
+        }
 
         return `
           <button type="button" onclick="openRoundDetail('${r.roundKey}')" class="w-full text-left ${st.cardCls} rounded-2xl p-3.5 shadow-xs transition block">
@@ -664,14 +671,8 @@
       const round = state.rounds.find(r => r.roundKey === roundKey);
       if (!round) return;
 
-      // ป้องกันการกดเข้าหน้ารับของสำหรับรอบที่ยังรอสั่งของ หรือรอบที่ถูก Void งดส่ง
-      if (round.status === 'WAITING_ORDER') {
-        showToast('รอบส่งนี้ยังไม่มีรายการสั่งในระบบ (สถานะ: รอสั่งของ)', true);
-        return;
-      }
-      if (round.status === 'VOID') {
-        const noteSuffix = round.voidNote ? ` [${round.voidNote}]` : '';
-        showToast(`รอบส่งนี้งดรอบ ไม่มีการสั่งของ${noteSuffix}`, true);
+      // ล็อกซ้ำชั้นที่ 2 ไม่ให้เปิดหน้ารายละเอียดหากยังไม่มีรายการสั่งสินค้าหรืองดรอบ
+      if (round.status === 'WAITING_ORDER' || round.status === 'VOID' || !round.items || round.items.length === 0) {
         return;
       }
 
