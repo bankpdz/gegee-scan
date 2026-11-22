@@ -2,6 +2,9 @@
 <html lang="th">
 <head>
   <meta charset="UTF-8">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
   <title>DQ ตรวจรับสินค้า</title>
   <script src="https://cdn.tailwindcss.com"></script>
@@ -99,7 +102,7 @@
         <div>
           <span class="inline-block text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#f0f8ff] text-[#0071BA] border border-[#b2e0fb]" id="pickerRoleBadge">Multi-Branch</span>
           <h2 class="text-base font-bold text-[#005288] mt-1">กรุณาเลือกสาขาที่ต้องการตรวจรับ</h2>
-          <p class="text-xs text-slate-500 mt-0.5">บัญชีของคุณมีสิทธิ์ดูแลมากกว่า 1 สาขา</p>
+          <p class="text-xs text-slate-500 mt-0.5">แสดงสถานะการกดรับของรวมทุกเดือน (รวมรายการค้างเดือนก่อนหน้า)</p>
         </div>
         <div class="w-10 h-10 rounded-2xl bg-[#f0f8ff] border border-[#b2e0fb] flex items-center justify-center text-lg">🏪</div>
       </div>
@@ -110,6 +113,17 @@
 
   <!-- VIEW 1: Rounds List -->
   <main id="roundsView" class="hidden max-w-lg mx-auto px-4 pt-4 space-y-3.5">
+    <!-- แถบแจ้งเตือนอัตโนมัติเมื่อมีรายการค้างไม่ได้กดยืนยันรับในเดือนอื่น/เดือนก่อนหน้า -->
+    <div id="otherMonthOverdueBanner" class="hidden bg-red-50 border-2 border-[#D32F2F] rounded-2xl p-3 shadow-xs flex items-center justify-between gap-2.5">
+      <div class="min-w-0">
+        <div class="text-xs font-bold text-[#D32F2F]" id="otherMonthOverdueTitle">⚠️ พบรายการค้างกดยืนยันรับในเดือนก่อนหน้า</div>
+        <div class="text-[11px] text-slate-600 mt-0.5" id="otherMonthOverdueSub">กรุณากดสลับไปยืนยันยอดรับสินค้าให้ครบ</div>
+      </div>
+      <button type="button" id="btnJumpOverdueMonth" class="shrink-0 bg-[#D32F2F] text-white text-[11px] font-bold px-3 py-1.5 rounded-xl shadow-2xs active:scale-95 transition">
+        ดูเดือนที่ค้าง ›
+      </button>
+    </div>
+
     <div class="bg-white border border-[#b2e0fb] rounded-2xl p-3.5 shadow-sm space-y-3">
       <div class="grid grid-cols-2 gap-2.5">
         <div>
@@ -201,7 +215,7 @@
   <div id="bottomActionBar" class="hidden fixed bottom-0 inset-x-0 bg-white/95 backdrop-blur border-t border-[#b2e0fb] z-20">
     <div class="max-w-lg mx-auto px-4 py-3">
       <button id="btnConfirmSubmit" onclick="handleConfirmReceive()" class="w-full py-3 rounded-xl text-sm font-bold text-white transition shadow-md">
-        ยืนยันรับสินค้า
+        กดยืนยันยอดรับสินค้าจริง
       </button>
     </div>
   </div>
@@ -281,26 +295,24 @@
     };
 
     function getTodayBangkokIso() {
-      const now = new Date();
-      const bkk = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Bangkok' }));
-      const y = bkk.getFullYear();
-      const m = String(bkk.getMonth() + 1).padStart(2, '0');
-      const d = String(bkk.getDate()).padStart(2, '0');
-      return `${y}-${m}-${d}`;
+      return new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'Asia/Bangkok',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+      }).format(new Date());
     }
 
-    /**
-     * เช็กสถานะของแต่ละรอบเทียบกับวันปัจจุบัน (เวลาไทย):
-     * - หากยังไม่ได้กดรับ และถึงวันส่งแล้วหรือเลยวันส่งมาแล้ว (deliveryDateIso <= todayIso) -> ถือเป็น 'UNRECEIVED_DUE' ("ยังไม่กดรับ")
-     * - หากยังไม่ถึงวันส่ง (deliveryDateIso > todayIso) และยังไม่ได้กดรับ -> 'UPCOMING' ("ยังไม่ถึงรอบส่ง")
-     */
     function getEffectiveRoundStatus(r) {
       if (!r) return 'UPCOMING';
       if (r.status === 'WAITING_ORDER' || r.status === 'VOID' || r.status === 'RECEIVED' || r.status === 'ISSUE' || r.status === 'PARTIAL') {
         return r.status;
       }
       const todayIso = getTodayBangkokIso();
-      if (r.status === 'LATE' || (r.deliveryDateIso && r.deliveryDateIso <= todayIso && !r.log)) {
+      const rawIso = String(r.deliveryDateIso || '').trim();
+      const isValidRealDate = /^\d{4}-\d{2}-\d{2}$/.test(rawIso);
+
+      if (r.status === 'LATE' || (isValidRealDate && rawIso <= todayIso && !r.log)) {
         return 'UNRECEIVED_DUE';
       }
       return 'UPCOMING';
@@ -394,7 +406,7 @@
               document.getElementById('monthSelect').value = dlMonth;
             }
           }
-          chooseBranchFromPicker(dlBranch, false);
+          chooseBranchFromPicker(dlBranch, false, Boolean(dlDate));
           if (dlDate) {
             const targetKey = `${dlBranch}|${state.selectedCategory}|${dlDate}`;
             const found = state.rounds.find(r => r.roundKey === targetKey);
@@ -408,7 +420,7 @@
         if (state.branches.length > 1) {
           openBranchPicker();
         } else {
-          chooseBranchFromPicker(state.branches[0] || '', false);
+          chooseBranchFromPicker(state.branches[0] || '', false, false);
         }
       } catch (err) {
         showFatalScreen('เชื่อมต่อไม่สำเร็จ', err && err.message ? err.message : String(err));
@@ -428,44 +440,60 @@
     }
 
     /**
-     * ป้ายสถานะหน้าเลือกสาขา:
-     * - ไม่มีคำว่า "รอรับ...รอบ"
-     * - หากมีรอบที่ถึงกำหนดส่งแล้วแต่ยังไม่กดรับ -> "ยังไม่กดรับ X รอบ"
-     * - หากรับครบแล้ว หรือเหลือเฉพาะรอบที่ยังไม่ถึงวันส่ง -> "กดรับครบแล้ว"
+     * แถบเลือกสาขา:
+     * 1) เช็กรายการที่ยังไม่กดรับ "รวมทุกเดือน" (หากเดือนก่อนหน้ายังค้างกดรับ จะขึ้นเตือนทันที)
+     * 2) หากบันทึกรับของครบทุกรอบแล้ว (รวมถึงรอบที่บันทึกรับของครบแล้วแต่มีรายการของไม่ได้รับครบ) -> แสดงแถบสีเขียว!
      */
     function renderBranchPickerCards() {
       const grid = document.getElementById('branchPickerGrid');
-      const targetMonth = state.selectedMonth;
+      const currentYm = getTodayBangkokIso().slice(0, 7);
 
       grid.innerHTML = state.branches.map(b => {
         const branchName = state.branchMeta[b] || '';
-        const branchRounds = state.rounds.filter(r => r.branch === b && (!targetMonth || r.monthKey === targetMonth));
+        // ตรวจสอบข้ามทุกเดือนเพื่อตามงานค้างจากเดือนก่อนหน้าด้วย
+        const allBranchRounds = state.rounds.filter(r => r.branch === b);
+        const actionableAllMonths = allBranchRounds.filter(r => r.status !== 'WAITING_ORDER' && r.status !== 'VOID');
 
-        const actionableRounds = branchRounds.filter(r => r.status !== 'WAITING_ORDER' && r.status !== 'VOID');
-        const unreceivedDueCount = actionableRounds.filter(r => getEffectiveRoundStatus(r) === 'UNRECEIVED_DUE').length;
-        const issueCount = actionableRounds.filter(r => r.status === 'ISSUE' || r.status === 'PARTIAL').length;
-        const waitingCount = branchRounds.filter(r => r.status === 'WAITING_ORDER').length;
-        const voidCount = branchRounds.filter(r => r.status === 'VOID').length;
+        const unreceivedAll = actionableAllMonths.filter(r => getEffectiveRoundStatus(r) === 'UNRECEIVED_DUE');
+        const unreceivedCount = unreceivedAll.length;
+        const hasPrevMonthOverdue = unreceivedAll.some(r => r.monthKey < currentYm);
 
-        let badgeHtml = `<span class="text-[11px] font-bold px-2.5 py-1 rounded-full bg-emerald-600 text-white shadow-2xs">กดรับครบแล้ว</span>`;
-        let cardBorderCls = 'border-[#b2e0fb] hover:border-[#0071BA]';
+        const completedCount = actionableAllMonths.filter(
+          r => r.status === 'RECEIVED' || r.status === 'ISSUE' || r.status === 'PARTIAL'
+        ).length;
 
-        if (branchRounds.length === 0) {
+        const currentMonthRounds = allBranchRounds.filter(r => r.monthKey === (state.selectedMonth || currentYm));
+        const waitingCount = currentMonthRounds.filter(r => r.status === 'WAITING_ORDER').length;
+        const voidCount = currentMonthRounds.filter(r => r.status === 'VOID').length;
+
+        let badgeHtml = `<span class="text-[11px] font-bold px-2.5 py-1 rounded-full bg-emerald-600 text-white shadow-2xs">✓ กดรับครบแล้ว</span>`;
+        let cardThemeCls = 'bg-emerald-50/55 border-2 border-emerald-500 hover:border-emerald-600';
+
+        if (allBranchRounds.length === 0) {
           badgeHtml = `<span class="text-[11px] font-medium px-2.5 py-1 rounded-full bg-slate-200 text-slate-600">รอสั่งสินค้า</span>`;
-        } else if (unreceivedDueCount > 0) {
-          badgeHtml = `<span class="text-[11px] font-bold px-2.5 py-1 rounded-full bg-red-50 text-[#D32F2F] border border-red-200">ยังไม่กดรับ ${unreceivedDueCount} รอบ</span>`;
-          cardBorderCls = 'border-red-300 hover:border-[#D32F2F]';
-        } else if (issueCount > 0) {
-          badgeHtml = `<span class="text-[10.5px] font-bold px-2.5 py-1 rounded-xl bg-[#D32F2F] text-white shadow-2xs text-right leading-tight inline-block max-w-[175px]">บันทึกรับของครบแล้ว / มีรายการของไม่ได้รับครบ (${issueCount})</span>`;
-          cardBorderCls = 'border-red-300 hover:border-[#D32F2F]';
-        } else if (actionableRounds.length === 0 && waitingCount > 0) {
+          cardThemeCls = 'bg-white border-2 border-[#b2e0fb] hover:border-[#0071BA]';
+        } else if (unreceivedCount > 0) {
+          const prevLabel = hasPrevMonthOverdue ? `<div class="text-[10px] font-semibold text-[#D32F2F] mt-0.5 text-right">มีค้างเดือนก่อนหน้า</div>` : '';
+          badgeHtml = `
+            <div class="text-right">
+              <span class="inline-block text-[11px] font-bold px-2.5 py-1 rounded-full bg-red-50 text-[#D32F2F] border border-red-200">ยังไม่กดรับ ${unreceivedCount} รอบ</span>
+              ${prevLabel}
+            </div>`;
+          cardThemeCls = 'bg-white border-2 border-red-300 hover:border-[#D32F2F]';
+        } else if (completedCount > 0) {
+          // บันทึกรับของครบทุกรอบแล้ว (แม้มีบางรอบของขาด/ไม่ได้รับครบ ก็ให้แสดงแถบสาขานี้เป็นสีเขียว)
+          badgeHtml = `<span class="text-[11px] font-bold px-2.5 py-1 rounded-full bg-emerald-600 text-white shadow-2xs">✓ บันทึกรับของครบแล้ว</span>`;
+          cardThemeCls = 'bg-emerald-50/55 border-2 border-emerald-500 hover:border-emerald-600';
+        } else if (actionableAllMonths.length === 0 && waitingCount > 0) {
           badgeHtml = `<span class="text-[11px] font-semibold px-2.5 py-1 rounded-full bg-slate-200 text-slate-600">รอสั่งสินค้า</span>`;
-        } else if (actionableRounds.length === 0 && voidCount > 0) {
+          cardThemeCls = 'bg-white border-2 border-[#b2e0fb] hover:border-[#0071BA]';
+        } else if (actionableAllMonths.length === 0 && voidCount > 0) {
           badgeHtml = `<span class="text-[11px] font-semibold px-2.5 py-1 rounded-full bg-slate-700 text-slate-200">ไม่มีการสั่งของ</span>`;
+          cardThemeCls = 'bg-white border-2 border-[#b2e0fb] hover:border-[#0071BA]';
         }
 
         return `
-          <button type="button" onclick="chooseBranchFromPicker('${b}', true)" class="w-full text-left bg-white border-2 ${cardBorderCls} rounded-2xl p-4 shadow-xs active:scale-[0.99] transition flex items-center justify-between gap-3">
+          <button type="button" onclick="chooseBranchFromPicker('${b}', true, false)" class="w-full text-left ${cardThemeCls} rounded-2xl p-4 shadow-xs active:scale-[0.99] transition flex items-center justify-between gap-3">
             <div class="min-w-0 flex-1">
               <div class="flex items-center gap-2 flex-wrap">
                 <span class="text-base font-bold text-[#005288]">DQ${escapeHtml(b)}</span>
@@ -478,10 +506,32 @@
       }).join('');
     }
 
-    function chooseBranchFromPicker(branchCode, showToastMsg) {
+    function chooseBranchFromPicker(branchCode, showToastMsg, skipAutoJumpOverdue) {
       state.selectedBranch = branchCode;
       const bSel = document.getElementById('branchSelect');
       if (bSel) bSel.value = branchCode;
+
+      // หากเดือนปัจจุบันไม่มีค้างรับ แต่เดือนก่อนหน้ายังมีรายการค้างไม่ได้กดยืนยันรับ ให้พาเปิดไปเดือนที่ค้างเก่าสุดอัตโนมัติ
+      if (!skipAutoJumpOverdue && branchCode) {
+        const currentMonthDue = state.rounds.filter(
+          r => r.branch === branchCode && r.monthKey === state.selectedMonth && getEffectiveRoundStatus(r) === 'UNRECEIVED_DUE'
+        );
+        if (currentMonthDue.length === 0) {
+          const allOverdueForBranch = state.rounds
+            .filter(r => r.branch === branchCode && getEffectiveRoundStatus(r) === 'UNRECEIVED_DUE')
+            .sort((a, b) => a.deliveryDateIso.localeCompare(b.deliveryDateIso));
+
+          if (allOverdueForBranch.length > 0) {
+            const oldestDue = allOverdueForBranch[0];
+            if (state.months.includes(oldestDue.monthKey)) {
+              state.selectedMonth = oldestDue.monthKey;
+              document.getElementById('monthSelect').value = oldestDue.monthKey;
+            }
+            state.selectedCategory = oldestDue.category;
+            renderCategoryTabs();
+          }
+        }
+      }
 
       document.getElementById('branchPickerView').classList.add('hidden');
       document.getElementById('roundsView').classList.remove('hidden');
@@ -562,15 +612,36 @@
       }
     }
 
-    /**
-     * กำหนดข้อความและสีป้ายสถานะของการ์ดแต่ละรอบส่ง:
-     * - RECEIVED -> กดรับครบแล้ว (สีเขียว)
-     * - ISSUE / PARTIAL -> บันทึกรับของครบแล้ว / มีรายการของไม่ได้รับครบ (สีแดง)
-     * - UNRECEIVED_DUE -> ยังไม่กดรับ (ถึงวันจัดส่งแล้วหรือเลยกำหนด)
-     * - UPCOMING -> ยังไม่ถึงรอบส่ง (สั่งออเดอร์ล่วงหน้าไว้แล้วแต่ยังไม่ถึงวันจัดส่ง)
-     * - WAITING_ORDER -> รอสั่งสินค้า (สีเทาอ่อน ล็อกห้ามกด)
-     * - VOID -> ไม่มีการสั่งของ (สีเทาเข้ม มีขีดฆ่า ล็อกห้ามกด)
-     */
+    function updateOtherMonthOverdueBanner() {
+      const banner = document.getElementById('otherMonthOverdueBanner');
+      const otherDue = state.rounds
+        .filter(r =>
+          r.branch === state.selectedBranch &&
+          r.monthKey !== state.selectedMonth &&
+          getEffectiveRoundStatus(r) === 'UNRECEIVED_DUE'
+        )
+        .sort((a, b) => a.deliveryDateIso.localeCompare(b.deliveryDateIso));
+
+      if (otherDue.length === 0) {
+        banner.classList.add('hidden');
+        return;
+      }
+
+      const targetRound = otherDue[0];
+      const monthLabel = formatThaiMonthLabel(targetRound.monthKey);
+      document.getElementById('otherMonthOverdueTitle').textContent = `⚠️ ยังไม่ได้กดยืนยันรับในเดือน ${monthLabel} (${otherDue.length} รอบ)`;
+      document.getElementById('otherMonthOverdueSub').textContent = 'กดปุ่มด้านขวาเพื่อสลับไปยืนยันยอดรับสินค้าที่ค้าง';
+      const jumpBtn = document.getElementById('btnJumpOverdueMonth');
+      jumpBtn.onclick = () => {
+        state.selectedMonth = targetRound.monthKey;
+        document.getElementById('monthSelect').value = targetRound.monthKey;
+        state.selectedCategory = targetRound.category;
+        renderCategoryTabs();
+        renderRoundsList();
+      };
+      banner.classList.remove('hidden');
+    }
+
     function getStatusMeta(effectiveStatus) {
       if (effectiveStatus === 'WAITING_ORDER') {
         return {
@@ -623,7 +694,7 @@
           cardCls: 'bg-white border border-red-300 hover:border-[#D32F2F] active:scale-[0.99]',
           titleCls: 'text-[#005288]',
           subLeftCls: 'text-[#0071BA]',
-          actionText: 'กดรับสินค้า ›',
+          actionText: 'กดยืนยันยอดรับสินค้าจริง ›',
           actionCls: 'text-[#D32F2F] font-bold'
         };
       }
@@ -633,12 +704,14 @@
         cardCls: 'bg-white border border-[#b2e0fb] hover:border-[#0071BA] active:scale-[0.99]',
         titleCls: 'text-[#005288]',
         subLeftCls: 'text-[#0071BA]',
-        actionText: 'ดูรายการสั่ง ›',
+        actionText: 'กดยืนยันยอดรับสินค้าจริง ›',
         actionCls: 'text-[#005288] font-bold'
       };
     }
 
     function renderRoundsList() {
+      updateOtherMonthOverdueBanner();
+
       const container = document.getElementById('roundsContainer');
       const filtered = state.rounds.filter(r =>
         r.branch === state.selectedBranch &&
@@ -938,10 +1011,10 @@
 
       btn.disabled = false;
       if (hasDiff) {
-        btn.textContent = '⚠️ บันทึกรับของครบแล้ว / มีรายการของไม่ได้รับครบ';
+        btn.textContent = '⚠️ กดยืนยันยอดรับสินค้าจริง (มีรายการไม่ได้รับครบ)';
         btn.className = 'w-full py-3 rounded-xl text-xs font-bold bg-[#D32F2F] hover:bg-red-700 text-white shadow-md active:scale-99 transition px-2';
       } else {
-        btn.textContent = '✅ ยืนยันกดรับครบแล้วทุกรายการ';
+        btn.textContent = '✅ กดยืนยันยอดรับสินค้าจริง';
         btn.className = 'w-full py-3 rounded-xl text-sm font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-md active:scale-99 transition';
       }
     }
@@ -1120,7 +1193,7 @@
         showToast(
           finalStatus === 'ISSUE'
             ? 'บันทึกรับของครบแล้ว / มีรายการของไม่ได้รับครบ (ส่งแจ้งเตือนแล้ว)'
-            : 'กดรับครบแล้วทุกรายการ',
+            : 'กดยืนยันยอดรับสินค้าจริงเรียบร้อยแล้ว',
           false
         );
         goBackView();
