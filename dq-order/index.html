@@ -6,14 +6,49 @@
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-  <title>DQ ตรวจรับสินค้า</title>
+  <title>Dairy Queen • ตรวจรับสินค้า</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Prompt:ital,wght@0,400;0,500;0,600;0,700;1,800&display=swap" rel="stylesheet">
   <style>
+    :root {
+      --dq-blue: #0079C8;
+      --dq-blue-dark: #005596;
+      --dq-red: #EE3E42;
+      --dq-orange: #FD7100;
+      --dq-ice-bg: #F4FAFF;
+      --dq-ice-border: #CBE7FB;
+    }
     * { font-family: 'Prompt', sans-serif; -webkit-tap-highlight-color: transparent; }
-    body { background-color: #f2f9fe; color: #0f172a; }
-    .dq-gradient { background: linear-gradient(135deg, #005288 0%, #0071BA 100%); }
+    body {
+      background-color: var(--dq-ice-bg);
+      background-image: radial-gradient(circle at 50% -10%, #dff1ff 0%, #f4faff 55%);
+      color: #0f172a;
+    }
+
+    /* แถบหัวเว็บสไตล์ Dairy Queen Thailand CI */
+    .dq-header {
+      background: linear-gradient(135deg, #0079C8 0%, #005596 100%);
+      border-bottom: 4px solid #FD7100;
+    }
+
+    /* โลโก้ทรงริมฝีปากเอกลักษณ์ Dairy Queen (แดง-ขอบขาว-วงแหวนส้ม) */
+    .dq-logo-pill {
+      background: #EE3E42;
+      border: 2px solid #FFFFFF;
+      box-shadow: 0 0 0 2px #FD7100, 0 3px 8px rgba(0, 42, 77, 0.25);
+      border-radius: 9999px;
+      font-style: italic;
+      font-weight: 800;
+      letter-spacing: 0.02em;
+    }
+
+    .dq-card {
+      background: #FFFFFF;
+      border: 1.5px solid var(--dq-ice-border);
+      box-shadow: 0 4px 14px rgba(0, 121, 200, 0.06);
+    }
+
     @keyframes scanBeam {
       0% { top: 6%; opacity: 0.9; }
       50% { top: 88%; opacity: 1; }
@@ -21,7 +56,7 @@
     }
     .scan-line {
       position: absolute; left: 0; right: 0; height: 3px;
-      background: #fd7100; box-shadow: 0 0 12px #fd7100;
+      background: #FD7100; box-shadow: 0 0 12px #FD7100;
       animation: scanBeam 1.8s infinite ease-in-out;
     }
 
@@ -50,23 +85,23 @@
 </head>
 <body class="min-h-screen pb-28">
 
-  <!-- Header -->
-  <header class="dq-gradient text-white sticky top-0 z-30 shadow-md">
-    <div class="max-w-lg mx-auto px-4 py-3 flex items-center justify-between">
-      <div class="flex items-center gap-2.5">
-        <button id="btnBack" onclick="goBackView()" class="hidden px-2.5 py-1 rounded-lg bg-white/15 text-xs font-medium active:scale-95 transition">
+  <!-- Header (Dairy Queen CI) -->
+  <header class="dq-header text-white sticky top-0 z-30 shadow-md">
+    <div class="max-w-lg mx-auto px-4 py-3 flex items-center justify-between gap-2">
+      <div class="flex items-center gap-2.5 min-w-0">
+        <button id="btnBack" onclick="goBackView()" class="hidden px-3 py-1 rounded-full bg-white/20 hover:bg-white/25 text-xs font-semibold active:scale-95 transition shrink-0">
           ‹ รอบส่ง
         </button>
-        <div class="bg-[#D32F2F] text-white font-bold text-xs px-2.5 py-1 rounded-full border border-white/80 tracking-wide shadow-sm">
+        <div class="dq-logo-pill text-white text-xs px-3 py-0.5 shrink-0 select-none">
           DQ
         </div>
-        <div>
-          <h1 class="text-sm font-bold leading-tight">ตรวจสอบออเดอร์ / รับสินค้า</h1>
-          <p id="headerSubtitle" class="text-[11px] text-[#b2e0fb] leading-tight">กำลังเชื่อมต่อบัญชี LINE...</p>
+        <div class="min-w-0">
+          <h1 class="text-sm font-bold leading-tight truncate">ตรวจสอบออเดอร์ / รับสินค้า</h1>
+          <p id="headerSubtitle" class="text-[11px] text-[#cbe7fb] leading-tight truncate">กำลังเชื่อมต่อบัญชี LINE...</p>
         </div>
       </div>
 
-      <button id="branchBadgeTop" type="button" onclick="onTopBranchClick()" class="hidden bg-white/15 border border-[#b2e0fb]/60 text-white text-xs font-semibold px-2.5 py-1 rounded-lg active:scale-95 transition">
+      <button id="branchBadgeTop" type="button" onclick="onTopBranchClick()" class="hidden bg-white text-[#0079C8] text-xs font-bold px-3 py-1 rounded-full shadow-xs active:scale-95 transition shrink-0">
         DQ----
       </button>
     </div>
@@ -74,22 +109,22 @@
 
   <!-- Loading Screen -->
   <div id="loadingScreen" class="max-w-lg mx-auto px-4 py-14 text-center">
-    <div class="w-12 h-12 rounded-full border-4 border-[#b2e0fb] border-t-[#0071BA] animate-spin mx-auto mb-4"></div>
-    <p id="loadingStepTitle" class="text-sm font-semibold text-[#005288]">กำลังเชื่อมต่อ LINE LIFF...</p>
+    <div class="w-12 h-12 rounded-full border-4 border-[#cbe7fb] border-t-[#0079C8] animate-spin mx-auto mb-4"></div>
+    <p id="loadingStepTitle" class="text-sm font-bold text-[#005596]">กำลังเชื่อมต่อ LINE LIFF...</p>
     <p id="loadingStepSub" class="text-xs text-slate-500 mt-1">กรุณารอสักครู่</p>
   </div>
 
   <!-- Unauthorized Screen -->
   <div id="unauthScreen" class="hidden max-w-lg mx-auto px-4 py-10">
-    <div class="bg-white border-2 border-[#D32F2F] rounded-2xl p-5 shadow-sm text-center">
-      <div class="w-12 h-12 rounded-full bg-red-50 text-[#D32F2F] flex items-center justify-center text-2xl mx-auto mb-3">⚠️</div>
-      <h2 class="text-base font-bold text-[#005288]">ยังไม่พบสิทธิ์เข้าใช้งานสาขา</h2>
+    <div class="bg-white border-2 border-[#EE3E42] rounded-3xl p-5 shadow-sm text-center">
+      <div class="w-12 h-12 rounded-full bg-red-50 text-[#EE3E42] flex items-center justify-center text-2xl mx-auto mb-3">⚠️</div>
+      <h2 class="text-base font-bold text-[#005596]">ยังไม่พบสิทธิ์เข้าใช้งานสาขา</h2>
       <p id="unauthMessage" class="text-xs text-slate-600 mt-1.5 leading-relaxed"></p>
-      <div class="mt-4 bg-slate-50 border border-slate-200 rounded-xl p-3 text-left">
-        <div class="text-[11px] text-slate-400">รหัส LINE User ID ของคุณ (คัดลอกส่งให้แอดมิน):</div>
+      <div class="mt-4 bg-[#F4FAFF] border border-[#CBE7FB] rounded-2xl p-3 text-left">
+        <div class="text-[11px] text-slate-500">รหัส LINE User ID ของคุณ (คัดลอกส่งให้แอดมิน):</div>
         <div class="flex items-center justify-between gap-2 mt-1">
-          <code id="myLineUidText" class="text-xs font-semibold text-[#005288] break-all">-</code>
-          <button onclick="copyMyUid()" class="shrink-0 bg-[#0071BA] text-white text-xs px-3 py-1.5 rounded-lg font-medium">คัดลอก</button>
+          <code id="myLineUidText" class="text-xs font-semibold text-[#005596] break-all">-</code>
+          <button onclick="copyMyUid()" class="shrink-0 bg-[#0079C8] text-white text-xs px-3.5 py-1.5 rounded-full font-bold shadow-xs">คัดลอก</button>
         </div>
       </div>
     </div>
@@ -97,14 +132,14 @@
 
   <!-- VIEW 0: Branch Picker Screen -->
   <main id="branchPickerView" class="hidden max-w-lg mx-auto px-4 pt-5 space-y-3.5">
-    <div class="bg-white border border-[#b2e0fb] rounded-2xl p-4 shadow-sm">
-      <div class="flex items-center justify-between">
+    <div class="dq-card rounded-3xl p-4">
+      <div class="flex items-center justify-between gap-3">
         <div>
-          <span class="inline-block text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#f0f8ff] text-[#0071BA] border border-[#b2e0fb]" id="pickerRoleBadge">Multi-Branch</span>
-          <h2 class="text-base font-bold text-[#005288] mt-1">กรุณาเลือกสาขาที่ต้องการตรวจรับ</h2>
-          <p class="text-xs text-slate-500 mt-0.5">แสดงสถานะการกดรับของรวมทุกเดือน (รวมรายการค้างเดือนก่อนหน้า)</p>
+          <span class="inline-block text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-[#E0F2FE] text-[#0079C8]" id="pickerRoleBadge">Multi-Branch</span>
+          <h2 class="text-base font-bold text-[#005596] mt-1.5">เลือกสาขาที่ต้องการตรวจรับ</h2>
+          <p class="text-xs text-slate-500 mt-0.5">แสดงสถานะการรับของรวมทุกเดือน (รวมรายการค้างเดือนก่อนหน้า)</p>
         </div>
-        <div class="w-10 h-10 rounded-2xl bg-[#f0f8ff] border border-[#b2e0fb] flex items-center justify-center text-lg">🏪</div>
+        <div class="w-11 h-11 rounded-full bg-[#F4FAFF] border border-[#CBE7FB] flex items-center justify-center text-xl shrink-0">🍦</div>
       </div>
     </div>
 
@@ -113,37 +148,38 @@
 
   <!-- VIEW 1: Rounds List -->
   <main id="roundsView" class="hidden max-w-lg mx-auto px-4 pt-4 space-y-3.5">
-    <!-- แถบแจ้งเตือนอัตโนมัติเมื่อมีรายการค้างไม่ได้กดยืนยันรับในเดือนอื่น/เดือนก่อนหน้า -->
-    <div id="otherMonthOverdueBanner" class="hidden bg-red-50 border-2 border-[#D32F2F] rounded-2xl p-3 shadow-xs flex items-center justify-between gap-2.5">
+    <!-- แถบแจ้งเตือนอัตโนมัติเมื่อมีรายการค้างไม่ได้กดยืนยันรับในเดือนก่อนหน้า -->
+    <div id="otherMonthOverdueBanner" class="hidden bg-red-50 border-2 border-[#EE3E42] rounded-2xl p-3 shadow-xs flex items-center justify-between gap-2.5">
       <div class="min-w-0">
-        <div class="text-xs font-bold text-[#D32F2F]" id="otherMonthOverdueTitle">⚠️ พบรายการค้างกดยืนยันรับในเดือนก่อนหน้า</div>
+        <div class="text-xs font-bold text-[#EE3E42]" id="otherMonthOverdueTitle">⚠️ พบรายการค้างกดยืนยันรับในเดือนก่อนหน้า</div>
         <div class="text-[11px] text-slate-600 mt-0.5" id="otherMonthOverdueSub">กรุณากดสลับไปยืนยันยอดรับสินค้าให้ครบ</div>
       </div>
-      <button type="button" id="btnJumpOverdueMonth" class="shrink-0 bg-[#D32F2F] text-white text-[11px] font-bold px-3 py-1.5 rounded-xl shadow-2xs active:scale-95 transition">
+      <button type="button" id="btnJumpOverdueMonth" class="shrink-0 bg-[#EE3E42] text-white text-[11px] font-bold px-3.5 py-1.5 rounded-full shadow-xs active:scale-95 transition">
         ดูเดือนที่ค้าง ›
       </button>
     </div>
 
-    <div class="bg-white border border-[#b2e0fb] rounded-2xl p-3.5 shadow-sm space-y-3">
+    <div class="dq-card rounded-3xl p-4 space-y-3.5">
       <div class="grid grid-cols-2 gap-2.5">
         <div>
           <div class="flex items-center justify-between mb-1">
-            <label class="text-[11px] font-semibold text-[#005288]">สาขา (Branch)</label>
-            <button id="btnSwitchBranchInline" type="button" onclick="openBranchPicker()" class="hidden text-[10px] font-bold text-[#0071BA] underline">สลับสาขา</button>
+            <label class="text-[11px] font-bold text-[#005596]">สาขา (Branch)</label>
+            <button id="btnSwitchBranchInline" type="button" onclick="openBranchPicker()" class="hidden text-[10px] font-bold text-[#FD7100] underline">สลับสาขา</button>
           </div>
-          <select id="branchSelect" onchange="onFilterChange()" class="w-full bg-[#f4faff] border border-[#b2e0fb] rounded-xl px-3 py-2 text-xs font-semibold text-[#005288] focus:outline-none focus:border-[#0071BA]"></select>
+          <select id="branchSelect" onchange="onFilterChange()" class="w-full bg-[#F4FAFF] border border-[#CBE7FB] rounded-full px-3.5 py-2 text-xs font-bold text-[#005596] focus:outline-none focus:border-[#0079C8]"></select>
         </div>
         <div>
-          <label class="block text-[11px] font-semibold text-[#005288] mb-1">รอบเดือน</label>
-          <select id="monthSelect" onchange="onFilterChange()" class="w-full bg-[#f4faff] border border-[#b2e0fb] rounded-xl px-3 py-2 text-xs font-semibold text-[#005288] focus:outline-none focus:border-[#0071BA]"></select>
+          <label class="block text-[11px] font-bold text-[#005596] mb-1">รอบเดือน</label>
+          <select id="monthSelect" onchange="onFilterChange()" class="w-full bg-[#F4FAFF] border border-[#CBE7FB] rounded-full px-3.5 py-2 text-xs font-bold text-[#005596] focus:outline-none focus:border-[#0079C8]"></select>
         </div>
       </div>
 
-      <div class="grid grid-cols-2 gap-2 pt-0.5">
-        <button id="tabCold" onclick="setCategory('COLD')" class="py-2.5 px-3 rounded-xl text-xs font-bold border transition flex items-center justify-center gap-1.5">
+      <!-- ปุ่มสลับหมวดทรงแคปซูล (Pill Tabs) ตามสไตล์ Dairy Queen Thailand -->
+      <div class="grid grid-cols-2 gap-2 bg-[#F4FAFF] p-1 rounded-full border border-[#CBE7FB]">
+        <button id="tabCold" onclick="setCategory('COLD')" class="py-2 px-3 rounded-full text-xs font-bold transition flex items-center justify-center gap-1.5">
           ❄️ ของเย็น (COLD)
         </button>
-        <button id="tabDry" onclick="setCategory('DRY')" class="py-2.5 px-3 rounded-xl text-xs font-bold border transition flex items-center justify-center gap-1.5">
+        <button id="tabDry" onclick="setCategory('DRY')" class="py-2 px-3 rounded-full text-xs font-bold transition flex items-center justify-center gap-1.5">
           📦 ของแห้ง (DRY)
         </button>
       </div>
@@ -154,67 +190,67 @@
 
   <!-- VIEW 2: Order Detail & Receiving -->
   <main id="detailView" class="hidden max-w-lg mx-auto px-4 pt-4 space-y-3.5">
-    <div id="detailHeaderCard" class="bg-white border border-[#b2e0fb] rounded-2xl p-3.5 shadow-sm transition">
+    <div id="detailHeaderCard" class="dq-card rounded-3xl p-4 transition">
       <div class="flex items-start justify-between gap-2">
         <div class="min-w-0 flex-1">
           <div class="flex flex-wrap items-center gap-1.5">
-            <span id="detailCatBadge" class="text-[11px] font-bold px-2 py-0.5 rounded-md text-white shrink-0"></span>
-            <span id="detailStatusBadge" class="text-[10.5px] font-bold px-2 py-0.5 rounded-md leading-snug"></span>
+            <span id="detailCatBadge" class="text-[11px] font-bold px-2.5 py-0.5 rounded-full text-white shrink-0"></span>
+            <span id="detailStatusBadge" class="text-[10.5px] font-bold px-2.5 py-0.5 rounded-full leading-snug"></span>
           </div>
-          <h2 id="detailRoundTitle" class="text-base font-bold text-[#005288] mt-1.5">W1 • -</h2>
+          <h2 id="detailRoundTitle" class="text-base font-bold text-[#005596] mt-1.5">W1 • -</h2>
         </div>
-        <span id="detailSkuCount" class="text-xs font-bold text-[#0071BA] bg-[#f0f8ff] border border-[#b2e0fb] px-2.5 py-1 rounded-lg shrink-0">
+        <span id="detailSkuCount" class="text-xs font-bold text-[#0079C8] bg-[#F4FAFF] border border-[#CBE7FB] px-3 py-1 rounded-full shrink-0">
           0 รายการ
         </span>
       </div>
 
-      <div class="grid grid-cols-2 gap-2 mt-3 pt-3 border-t border-[#e5f3fd]">
-        <button onclick="toggleCheckAll()" class="py-2 px-3 rounded-xl border border-[#b2e0fb] bg-[#f5fbff] text-[#005288] text-xs font-semibold active:scale-98 transition">
+      <div class="grid grid-cols-2 gap-2.5 mt-3.5 pt-3 border-t border-[#E5F3FD]">
+        <button onclick="toggleCheckAll()" class="py-2 px-3 rounded-full border border-[#CBE7FB] bg-[#F4FAFF] text-[#005596] text-xs font-bold active:scale-95 transition">
           ☑️ ติ๊กทั้งหมด
         </button>
-        <button onclick="openDoModal()" class="py-2 px-3 rounded-xl bg-[#fd7100] text-white text-xs font-bold shadow-sm active:scale-98 transition flex items-center justify-center gap-1">
-          📸 ถ่ายรูป DO <span id="photoCountChip" class="bg-white/25 px-1.5 py-0.2 rounded text-[10px]">0</span>
+        <button onclick="openDoModal()" class="py-2 px-3 rounded-full bg-[#FD7100] hover:bg-[#e56500] text-white text-xs font-bold shadow-sm active:scale-95 transition flex items-center justify-center gap-1.5">
+          📸 ถ่ายรูป DO <span id="photoCountChip" class="bg-white/25 px-2 py-0.2 rounded-full text-[10px]">0</span>
         </button>
       </div>
     </div>
 
-    <div id="photoRequiredBanner" class="bg-red-50 border border-[#D32F2F] rounded-xl px-3.5 py-2.5 flex items-center justify-between gap-2">
-      <div class="text-xs text-[#D32F2F] font-medium">
+    <div id="photoRequiredBanner" class="bg-red-50 border border-[#EE3E42] rounded-2xl px-3.5 py-2.5 flex items-center justify-between gap-2">
+      <div class="text-xs text-[#EE3E42] font-medium">
         📷 <strong>บังคับแนบรูปใบ DO</strong> อย่างน้อย 1 รูปเป็นหลักฐานก่อนยืนยันรับสินค้า
       </div>
-      <button onclick="openDoModal()" class="shrink-0 bg-[#D32F2F] text-white text-[11px] font-bold px-2.5 py-1.5 rounded-lg">
+      <button onclick="openDoModal()" class="shrink-0 bg-[#EE3E42] text-white text-[11px] font-bold px-3 py-1.5 rounded-full shadow-2xs">
         แนบรูป
       </button>
     </div>
 
-    <div id="photoAttachedBanner" class="hidden bg-[#f0f8ff] border border-[#0071BA] rounded-xl px-3.5 py-2.5 flex items-center justify-between gap-2">
-      <div class="text-xs text-[#005288] font-medium">
+    <div id="photoAttachedBanner" class="hidden bg-[#E0F2FE] border border-[#0079C8] rounded-2xl px-3.5 py-2.5 flex items-center justify-between gap-2">
+      <div class="text-xs text-[#005596] font-medium">
         ✅ แนบรูปหลักฐานใบ DO แล้ว <strong id="attachedCountText">1</strong> รูป
       </div>
-      <button onclick="openDoModal()" class="shrink-0 text-[#0071BA] underline text-xs font-semibold">
+      <button onclick="openDoModal()" class="shrink-0 text-[#0079C8] underline text-xs font-bold">
         ดู/เพิ่มรูป
       </button>
     </div>
 
     <div id="itemsContainer" class="space-y-2.5"></div>
 
-    <div class="bg-white border border-[#b2e0fb] rounded-2xl p-3.5 shadow-sm space-y-3">
+    <div class="dq-card rounded-3xl p-4 space-y-3">
       <div>
-        <label class="block text-xs font-bold text-[#005288] mb-1">ผู้ตรวจรับ (ดึงอัตโนมัติตามบัญชี LINE)</label>
-        <input id="inspectorInput" type="text" readonly class="w-full bg-slate-100 border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold text-[#005288] cursor-not-allowed">
+        <label class="block text-xs font-bold text-[#005596] mb-1">ผู้ตรวจรับ (ดึงอัตโนมัติตามบัญชี LINE)</label>
+        <input id="inspectorInput" type="text" readonly class="w-full bg-slate-100 border border-slate-200 rounded-full px-3.5 py-2 text-xs font-semibold text-[#005596] cursor-not-allowed">
       </div>
 
       <div>
-        <label class="block text-xs font-bold text-[#005288] mb-1">หมายเหตุ / แจ้งปัญหาสินค้า</label>
-        <textarea id="remarkInput" rows="2" placeholder="ระบุปัญหาที่พบ ชื่อรายการ และจำนวน (ถ้ามี)" class="w-full bg-[#f8fcff] border border-[#b2e0fb] rounded-xl px-3 py-2 text-xs text-slate-800 focus:outline-none focus:border-[#0071BA]"></textarea>
+        <label class="block text-xs font-bold text-[#005596] mb-1">หมายเหตุ / แจ้งปัญหาสินค้า</label>
+        <textarea id="remarkInput" rows="2" placeholder="ระบุปัญหาที่พบ ชื่อรายการ และจำนวน (ถ้ามี)" class="w-full bg-[#F4FAFF] border border-[#CBE7FB] rounded-2xl px-3.5 py-2 text-xs text-slate-800 focus:outline-none focus:border-[#0079C8]"></textarea>
       </div>
     </div>
   </main>
 
   <!-- Sticky Bottom Confirm Bar -->
-  <div id="bottomActionBar" class="hidden fixed bottom-0 inset-x-0 bg-white/95 backdrop-blur border-t border-[#b2e0fb] z-20">
+  <div id="bottomActionBar" class="hidden fixed bottom-0 inset-x-0 bg-white/95 backdrop-blur border-t-2 border-[#CBE7FB] z-20">
     <div class="max-w-lg mx-auto px-4 py-3">
-      <button id="btnConfirmSubmit" onclick="handleConfirmReceive()" class="w-full py-3 rounded-xl text-sm font-bold text-white transition shadow-md">
+      <button id="btnConfirmSubmit" onclick="handleConfirmReceive()" class="w-full py-3 rounded-full text-sm font-bold text-white transition shadow-md">
         กดยืนยันยอดรับสินค้าจริง
       </button>
     </div>
@@ -222,11 +258,14 @@
 
   <!-- MODAL: Capture / Upload DO & AI OCR -->
   <div id="doModal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
-    <div class="bg-white w-full max-w-lg rounded-t-3xl sm:rounded-3xl border-t-4 border-[#0071BA] max-h-[90vh] overflow-y-auto p-4 space-y-3.5">
+    <div class="bg-white w-full max-w-lg rounded-t-3xl sm:rounded-3xl border-t-4 border-[#FD7100] max-h-[90vh] overflow-y-auto p-4 space-y-3.5 shadow-xl">
       <div class="flex items-center justify-between">
-        <div>
-          <h3 class="text-sm font-bold text-[#005288]">ถ่ายรูป / สแกนใบรับของ (DO)</h3>
-          <p class="text-[11px] text-slate-500">ใช้เป็นภาพหลักฐานบังคับ และสแกนตัดยอดด้วย AI ได้ทันที</p>
+        <div class="flex items-center gap-2">
+          <span class="dq-logo-pill text-white text-[10px] px-2 py-0.5">DQ</span>
+          <div>
+            <h3 class="text-sm font-bold text-[#005596]">ถ่ายรูป / สแกนใบรับของ (DO)</h3>
+            <p class="text-[11px] text-slate-500">ใช้เป็นภาพหลักฐานบังคับ และสแกนตัดยอดด้วย AI ได้ทันที</p>
+          </div>
         </div>
         <button onclick="closeDoModal()" class="w-8 h-8 rounded-full bg-slate-100 text-slate-600 font-bold text-sm">✕</button>
       </div>
@@ -235,36 +274,36 @@
       <input id="galleryFileInput" type="file" accept="image/*" multiple class="hidden" onchange="handleFilesSelected(event)">
 
       <div class="grid grid-cols-2 gap-2.5">
-        <button type="button" onclick="document.getElementById('cameraFileInput').click()" class="py-2.5 px-3 rounded-xl bg-[#0071BA] text-white text-xs font-bold shadow-xs active:scale-98 transition">
+        <button type="button" onclick="document.getElementById('cameraFileInput').click()" class="py-2.5 px-3 rounded-full bg-[#0079C8] text-white text-xs font-bold shadow-xs active:scale-95 transition">
           📷 ถ่ายรูป
         </button>
-        <button type="button" onclick="document.getElementById('galleryFileInput').click()" class="py-2.5 px-3 rounded-xl bg-[#f0f8ff] border border-[#0071BA] text-[#005288] text-xs font-bold active:scale-98 transition">
+        <button type="button" onclick="document.getElementById('galleryFileInput').click()" class="py-2.5 px-3 rounded-full bg-[#F4FAFF] border border-[#0079C8] text-[#005596] text-xs font-bold active:scale-95 transition">
           🖼️ เลือกรูปในเครื่อง
         </button>
       </div>
 
-      <div id="doPreviewContainer" class="relative min-h-[120px] bg-slate-50 border border-dashed border-[#b2e0fb] rounded-2xl p-3">
+      <div id="doPreviewContainer" class="relative min-h-[120px] bg-[#F4FAFF] border border-dashed border-[#0079C8]/50 rounded-2xl p-3">
         <div id="doEmptyHint" class="py-6 text-center text-xs text-slate-400">
           ยังไม่มีรูปใบ DO กรุณากดปุ่ม <strong>ถ่ายรูป</strong> หรือ <strong>เลือกรูปในเครื่อง</strong>
         </div>
         <div id="doThumbGrid" class="hidden grid grid-cols-3 gap-2"></div>
-        <div id="ocrScanningOverlay" class="hidden absolute inset-0 bg-[#005288]/80 rounded-2xl flex flex-col items-center justify-center text-white overflow-hidden">
+        <div id="ocrScanningOverlay" class="hidden absolute inset-0 bg-[#005596]/85 rounded-2xl flex flex-col items-center justify-center text-white overflow-hidden">
           <div class="scan-line"></div>
           <div class="text-xs font-bold">🔍 AI กำลังอ่านยอดจากใบ DO...</div>
-          <div class="text-[11px] text-[#b2e0fb] mt-1">กำลังรวมยอดใบหลักและใบแยกอัตโนมัติ</div>
+          <div class="text-[11px] text-[#CBE7FB] mt-1">กำลังรวมยอดใบหลักและใบแยกอัตโนมัติ</div>
         </div>
       </div>
 
-      <div id="ocrResultBox" class="hidden bg-[#f4faff] border border-[#b2e0fb] rounded-2xl p-3 space-y-2">
-        <div class="text-xs font-bold text-[#005288]" id="ocrSummaryTitle">ผลสแกนใบ DO</div>
+      <div id="ocrResultBox" class="hidden bg-[#F4FAFF] border border-[#CBE7FB] rounded-2xl p-3 space-y-2">
+        <div class="text-xs font-bold text-[#005596]" id="ocrSummaryTitle">ผลสแกนใบ DO</div>
         <div id="ocrSummaryBody" class="text-xs text-slate-700 space-y-1"></div>
       </div>
 
-      <div class="grid grid-cols-2 gap-2 pt-1">
-        <button type="button" onclick="attachPhotosOnly()" class="py-2.5 px-3 rounded-xl border border-[#005288] text-[#005288] text-xs font-bold">
+      <div class="grid grid-cols-2 gap-2.5 pt-1">
+        <button type="button" onclick="attachPhotosOnly()" class="py-2.5 px-3 rounded-full border-2 border-[#0079C8] text-[#0079C8] text-xs font-bold active:scale-95 transition">
           📎 แนบรูปหลักฐาน
         </button>
-        <button id="btnRunOcr" type="button" onclick="runAiOcrScan()" class="py-2.5 px-3 rounded-xl bg-[#fd7100] text-white text-xs font-bold shadow-xs">
+        <button id="btnRunOcr" type="button" onclick="runAiOcrScan()" class="py-2.5 px-3 rounded-full bg-[#FD7100] text-white text-xs font-bold shadow-xs active:scale-95 transition">
           🔍 สแกนตัดยอด AI
         </button>
       </div>
@@ -272,7 +311,7 @@
   </div>
 
   <!-- Toast -->
-  <div id="toastBox" class="hidden fixed top-16 left-1/2 -translate-x-1/2 z-50 bg-[#005288] text-white text-xs font-semibold px-4 py-2.5 rounded-full shadow-lg text-center max-w-[90vw]"></div>
+  <div id="toastBox" class="hidden fixed top-16 left-1/2 -translate-x-1/2 z-50 bg-[#0079C8] text-white text-xs font-semibold px-4 py-2.5 rounded-full shadow-lg text-center max-w-[90vw]"></div>
 
   <script>
     const LIFF_ID = '2012520828-rhinGNIQ';
@@ -342,10 +381,10 @@
       const screen = document.getElementById('loadingScreen');
       screen.classList.remove('hidden');
       screen.innerHTML = `
-        <div class="bg-white border-2 border-[#D32F2F] rounded-2xl p-4 text-left shadow-sm">
-          <div class="text-sm font-bold text-[#D32F2F]">❌ ${escapeHtml(stepTitle)}</div>
-          <div class="text-xs text-slate-700 mt-2 break-words bg-red-50 p-3 rounded-xl border border-red-200 leading-relaxed">${escapeHtml(detailMsg)}</div>
-          <button onclick="window.location.reload()" class="mt-3 w-full py-2.5 rounded-xl bg-[#0071BA] text-white text-xs font-bold">ลองโหลดใหม่อีกครั้ง</button>
+        <div class="bg-white border-2 border-[#EE3E42] rounded-3xl p-4 text-left shadow-sm">
+          <div class="text-sm font-bold text-[#EE3E42]">❌ ${escapeHtml(stepTitle)}</div>
+          <div class="text-xs text-slate-700 mt-2 break-words bg-red-50 p-3 rounded-2xl border border-red-200 leading-relaxed">${escapeHtml(detailMsg)}</div>
+          <button onclick="window.location.reload()" class="mt-3 w-full py-2.5 rounded-full bg-[#0079C8] text-white text-xs font-bold">ลองโหลดใหม่อีกครั้ง</button>
         </div>`;
     }
 
@@ -439,18 +478,12 @@
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
-    /**
-     * แถบเลือกสาขา:
-     * 1) เช็กรายการที่ยังไม่กดรับ "รวมทุกเดือน" (หากเดือนก่อนหน้ายังค้างกดรับ จะขึ้นเตือนทันที)
-     * 2) หากบันทึกรับของครบทุกรอบแล้ว (รวมถึงรอบที่บันทึกรับของครบแล้วแต่มีรายการของไม่ได้รับครบ) -> แสดงแถบสีเขียว!
-     */
     function renderBranchPickerCards() {
       const grid = document.getElementById('branchPickerGrid');
       const currentYm = getTodayBangkokIso().slice(0, 7);
 
       grid.innerHTML = state.branches.map(b => {
         const branchName = state.branchMeta[b] || '';
-        // ตรวจสอบข้ามทุกเดือนเพื่อตามงานค้างจากเดือนก่อนหน้าด้วย
         const allBranchRounds = state.rounds.filter(r => r.branch === b);
         const actionableAllMonths = allBranchRounds.filter(r => r.status !== 'WAITING_ORDER' && r.status !== 'VOID');
 
@@ -466,40 +499,39 @@
         const waitingCount = currentMonthRounds.filter(r => r.status === 'WAITING_ORDER').length;
         const voidCount = currentMonthRounds.filter(r => r.status === 'VOID').length;
 
-        let badgeHtml = `<span class="text-[11px] font-bold px-2.5 py-1 rounded-full bg-emerald-600 text-white shadow-2xs">✓ กดรับครบแล้ว</span>`;
-        let cardThemeCls = 'bg-emerald-50/55 border-2 border-emerald-500 hover:border-emerald-600';
+        let badgeHtml = `<span class="text-[11px] font-bold px-3 py-1 rounded-full bg-emerald-600 text-white shadow-2xs">✓ กดรับครบแล้ว</span>`;
+        let cardThemeCls = 'bg-emerald-50/60 border-2 border-emerald-500 hover:border-emerald-600';
 
         if (allBranchRounds.length === 0) {
-          badgeHtml = `<span class="text-[11px] font-medium px-2.5 py-1 rounded-full bg-slate-200 text-slate-600">รอสั่งสินค้า</span>`;
-          cardThemeCls = 'bg-white border-2 border-[#b2e0fb] hover:border-[#0071BA]';
+          badgeHtml = `<span class="text-[11px] font-medium px-3 py-1 rounded-full bg-slate-200 text-slate-600">รอสั่งสินค้า</span>`;
+          cardThemeCls = 'bg-white border-2 border-[#CBE7FB] hover:border-[#0079C8]';
         } else if (unreceivedCount > 0) {
-          const prevLabel = hasPrevMonthOverdue ? `<div class="text-[10px] font-semibold text-[#D32F2F] mt-0.5 text-right">มีค้างเดือนก่อนหน้า</div>` : '';
+          const prevLabel = hasPrevMonthOverdue ? `<div class="text-[10px] font-bold text-[#EE3E42] mt-0.5 text-right">มีค้างเดือนก่อนหน้า</div>` : '';
           badgeHtml = `
             <div class="text-right">
-              <span class="inline-block text-[11px] font-bold px-2.5 py-1 rounded-full bg-red-50 text-[#D32F2F] border border-red-200">ยังไม่กดรับ ${unreceivedCount} รอบ</span>
+              <span class="inline-block text-[11px] font-bold px-3 py-1 rounded-full bg-red-50 text-[#EE3E42] border border-red-200">ยังไม่กดรับ ${unreceivedCount} รอบ</span>
               ${prevLabel}
             </div>`;
-          cardThemeCls = 'bg-white border-2 border-red-300 hover:border-[#D32F2F]';
+          cardThemeCls = 'bg-white border-2 border-[#EE3E42]/60 hover:border-[#EE3E42]';
         } else if (completedCount > 0) {
-          // บันทึกรับของครบทุกรอบแล้ว (แม้มีบางรอบของขาด/ไม่ได้รับครบ ก็ให้แสดงแถบสาขานี้เป็นสีเขียว)
-          badgeHtml = `<span class="text-[11px] font-bold px-2.5 py-1 rounded-full bg-emerald-600 text-white shadow-2xs">✓ บันทึกรับของครบแล้ว</span>`;
-          cardThemeCls = 'bg-emerald-50/55 border-2 border-emerald-500 hover:border-emerald-600';
+          badgeHtml = `<span class="text-[11px] font-bold px-3 py-1 rounded-full bg-emerald-600 text-white shadow-2xs">✓ บันทึกรับของครบแล้ว</span>`;
+          cardThemeCls = 'bg-emerald-50/60 border-2 border-emerald-500 hover:border-emerald-600';
         } else if (actionableAllMonths.length === 0 && waitingCount > 0) {
-          badgeHtml = `<span class="text-[11px] font-semibold px-2.5 py-1 rounded-full bg-slate-200 text-slate-600">รอสั่งสินค้า</span>`;
-          cardThemeCls = 'bg-white border-2 border-[#b2e0fb] hover:border-[#0071BA]';
+          badgeHtml = `<span class="text-[11px] font-semibold px-3 py-1 rounded-full bg-slate-200 text-slate-600">รอสั่งสินค้า</span>`;
+          cardThemeCls = 'bg-white border-2 border-[#CBE7FB] hover:border-[#0079C8]';
         } else if (actionableAllMonths.length === 0 && voidCount > 0) {
-          badgeHtml = `<span class="text-[11px] font-semibold px-2.5 py-1 rounded-full bg-slate-700 text-slate-200">ไม่มีการสั่งของ</span>`;
-          cardThemeCls = 'bg-white border-2 border-[#b2e0fb] hover:border-[#0071BA]';
+          badgeHtml = `<span class="text-[11px] font-semibold px-3 py-1 rounded-full bg-slate-700 text-slate-200">ไม่มีการสั่งของ</span>`;
+          cardThemeCls = 'bg-white border-2 border-[#CBE7FB] hover:border-[#0079C8]';
         }
 
         return `
-          <button type="button" onclick="chooseBranchFromPicker('${b}', true, false)" class="w-full text-left ${cardThemeCls} rounded-2xl p-4 shadow-xs active:scale-[0.99] transition flex items-center justify-between gap-3">
+          <button type="button" onclick="chooseBranchFromPicker('${b}', true, false)" class="w-full text-left ${cardThemeCls} rounded-3xl p-4 shadow-xs active:scale-[0.99] transition flex items-center justify-between gap-3">
             <div class="min-w-0 flex-1">
               <div class="flex items-center gap-2 flex-wrap">
-                <span class="text-base font-bold text-[#005288]">DQ${escapeHtml(b)}</span>
+                <span class="text-base font-bold text-[#005596]">DQ${escapeHtml(b)}</span>
                 ${branchName ? `<span class="text-xs font-medium text-slate-600">• ${escapeHtml(branchName)}</span>` : ''}
               </div>
-              <div class="text-[11px] text-[#0071BA] mt-1">แตะเพื่อเข้าดูรอบส่งทั้งเดือน (ของเย็น / ของแห้ง) ›</div>
+              <div class="text-[11px] font-medium text-[#0079C8] mt-1">แตะเพื่อเข้าดูรอบส่งทั้งเดือน ›</div>
             </div>
             <div class="shrink-0">${badgeHtml}</div>
           </button>`;
@@ -511,7 +543,6 @@
       const bSel = document.getElementById('branchSelect');
       if (bSel) bSel.value = branchCode;
 
-      // หากเดือนปัจจุบันไม่มีค้างรับ แต่เดือนก่อนหน้ายังมีรายการค้างไม่ได้กดยืนยันรับ ให้พาเปิดไปเดือนที่ค้างเก่าสุดอัตโนมัติ
       if (!skipAutoJumpOverdue && branchCode) {
         const currentMonthDue = state.rounds.filter(
           r => r.branch === branchCode && r.monthKey === state.selectedMonth && getEffectiveRoundStatus(r) === 'UNRECEIVED_DUE'
@@ -604,11 +635,11 @@
       const coldBtn = document.getElementById('tabCold');
       const dryBtn = document.getElementById('tabDry');
       if (state.selectedCategory === 'COLD') {
-        coldBtn.className = 'py-2.5 px-3 rounded-xl text-xs font-bold border border-[#0071BA] bg-[#0071BA] text-white shadow-xs flex items-center justify-center gap-1.5';
-        dryBtn.className = 'py-2.5 px-3 rounded-xl text-xs font-bold border border-[#b2e0fb] bg-white text-[#005288] flex items-center justify-center gap-1.5';
+        coldBtn.className = 'py-2 px-3 rounded-full text-xs font-bold bg-[#0079C8] text-white shadow-sm flex items-center justify-center gap-1.5 transition';
+        dryBtn.className = 'py-2 px-3 rounded-full text-xs font-bold text-[#005596] hover:bg-white/60 flex items-center justify-center gap-1.5 transition';
       } else {
-        dryBtn.className = 'py-2.5 px-3 rounded-xl text-xs font-bold border border-[#fd7100] bg-[#fd7100] text-white shadow-xs flex items-center justify-center gap-1.5';
-        coldBtn.className = 'py-2.5 px-3 rounded-xl text-xs font-bold border border-[#b2e0fb] bg-white text-[#005288] flex items-center justify-center gap-1.5';
+        dryBtn.className = 'py-2 px-3 rounded-full text-xs font-bold bg-[#FD7100] text-white shadow-sm flex items-center justify-center gap-1.5 transition';
+        coldBtn.className = 'py-2 px-3 rounded-full text-xs font-bold text-[#005596] hover:bg-white/60 flex items-center justify-center gap-1.5 transition';
       }
     }
 
@@ -671,7 +702,7 @@
           badgeCls: 'bg-emerald-600 text-white shadow-2xs',
           cardCls: 'bg-emerald-50/70 border-2 border-emerald-500 hover:border-emerald-600 active:scale-[0.99]',
           titleCls: 'text-emerald-900',
-          subLeftCls: 'text-[#0071BA]',
+          subLeftCls: 'text-[#0079C8]',
           actionText: 'ดูรายการรับแล้ว ›',
           actionCls: 'text-emerald-700 font-bold'
         };
@@ -679,33 +710,33 @@
       if (effectiveStatus === 'ISSUE' || effectiveStatus === 'PARTIAL') {
         return {
           text: 'บันทึกรับของครบแล้ว / มีรายการของไม่ได้รับครบ',
-          badgeCls: 'bg-[#D32F2F] text-white shadow-2xs',
-          cardCls: 'bg-red-50/70 border-2 border-[#D32F2F] hover:border-red-700 active:scale-[0.99]',
-          titleCls: 'text-[#D32F2F]',
-          subLeftCls: 'text-[#0071BA]',
+          badgeCls: 'bg-[#EE3E42] text-white shadow-2xs',
+          cardCls: 'bg-red-50/70 border-2 border-[#EE3E42] hover:border-red-600 active:scale-[0.99]',
+          titleCls: 'text-[#EE3E42]',
+          subLeftCls: 'text-[#0079C8]',
           actionText: 'ตรวจสอบ / แก้ไข ›',
-          actionCls: 'text-[#D32F2F] font-bold'
+          actionCls: 'text-[#EE3E42] font-bold'
         };
       }
       if (effectiveStatus === 'UNRECEIVED_DUE') {
         return {
           text: 'ยังไม่กดรับ',
-          badgeCls: 'bg-red-100 text-[#D32F2F] border border-red-300',
-          cardCls: 'bg-white border border-red-300 hover:border-[#D32F2F] active:scale-[0.99]',
-          titleCls: 'text-[#005288]',
-          subLeftCls: 'text-[#0071BA]',
+          badgeCls: 'bg-red-50 text-[#EE3E42] border border-[#EE3E42]/40',
+          cardCls: 'bg-white border-2 border-[#EE3E42]/50 hover:border-[#EE3E42] active:scale-[0.99]',
+          titleCls: 'text-[#005596]',
+          subLeftCls: 'text-[#0079C8]',
           actionText: 'กดยืนยันยอดรับสินค้าจริง ›',
-          actionCls: 'text-[#D32F2F] font-bold'
+          actionCls: 'bg-[#0079C8] text-white px-3 py-1 rounded-full text-[11px] font-bold shadow-2xs'
         };
       }
       return {
         text: 'ยังไม่ถึงรอบส่ง',
-        badgeCls: 'bg-[#f0f8ff] text-[#0071BA] border border-[#b2e0fb]',
-        cardCls: 'bg-white border border-[#b2e0fb] hover:border-[#0071BA] active:scale-[0.99]',
-        titleCls: 'text-[#005288]',
-        subLeftCls: 'text-[#0071BA]',
+        badgeCls: 'bg-[#E0F2FE] text-[#0079C8] border border-[#CBE7FB]',
+        cardCls: 'bg-white border-[1.5px] border-[#CBE7FB] hover:border-[#0079C8] active:scale-[0.99]',
+        titleCls: 'text-[#005596]',
+        subLeftCls: 'text-[#0079C8]',
         actionText: 'กดยืนยันยอดรับสินค้าจริง ›',
-        actionCls: 'text-[#005288] font-bold'
+        actionCls: 'text-[#0079C8] font-bold'
       };
     }
 
@@ -721,8 +752,8 @@
 
       if (filtered.length === 0) {
         container.innerHTML = `
-          <div class="bg-white border border-[#b2e0fb] rounded-2xl p-8 text-center">
-            <p class="text-xs font-semibold text-[#005288]">ไม่มีตารางรอบส่งสินค้าในเดือนและหมวดที่เลือก (สาขา DQ${escapeHtml(state.selectedBranch)})</p>
+          <div class="dq-card rounded-3xl p-8 text-center">
+            <p class="text-xs font-bold text-[#005596]">ไม่มีตารางรอบส่งสินค้าในเดือนและหมวดที่เลือก (สาขา DQ${escapeHtml(state.selectedBranch)})</p>
           </div>`;
         return;
       }
@@ -741,15 +772,15 @@
         }
 
         const inspectorInfo = (r.log && !isLocked)
-          ? `<div class="text-[11px] text-slate-600 mt-1.5 pt-1.5 border-t border-slate-200/70">ตรวจรับโดย: <strong class="text-[#005288]">${escapeHtml(r.log.inspectorName)}</strong> • ${escapeHtml(r.log.timestamp)}</div>`
+          ? `<div class="text-[11px] text-slate-600 mt-2 pt-2 border-t border-slate-200/70">ตรวจรับโดย: <strong class="text-[#005596]">${escapeHtml(r.log.inspectorName)}</strong> • ${escapeHtml(r.log.timestamp)}</div>`
           : '';
 
         if (isLocked) {
           return `
-            <div aria-disabled="true" class="w-full text-left ${st.cardCls} rounded-2xl p-3.5 block">
+            <div aria-disabled="true" class="w-full text-left ${st.cardCls} rounded-3xl p-4 block">
               <div class="flex items-center justify-between gap-2">
                 <div class="text-sm font-bold ${st.titleCls}">${escapeHtml(r.displayHeader)}</div>
-                <span class="text-[11px] font-bold px-2.5 py-0.5 rounded-full shrink-0 ${st.badgeCls}">${st.text}</span>
+                <span class="text-[11px] font-bold px-3 py-0.5 rounded-full shrink-0 ${st.badgeCls}">${st.text}</span>
               </div>
               <div class="flex items-center justify-between mt-1.5 gap-2">
                 <span class="text-xs font-medium ${st.subLeftCls}">${escapeHtml(leftDetailText)}</span>
@@ -760,18 +791,18 @@
         const headerRowHtml = isLongIssueStatus
           ? `<div class="space-y-1.5">
                <div class="text-sm font-bold ${st.titleCls}">${escapeHtml(r.displayHeader)}</div>
-               <div><span class="inline-block text-[10.5px] font-bold px-2.5 py-1 rounded-lg leading-snug ${st.badgeCls}">${st.text}</span></div>
+               <div><span class="inline-block text-[10.5px] font-bold px-3 py-1 rounded-full leading-snug ${st.badgeCls}">${st.text}</span></div>
              </div>`
           : `<div class="flex items-center justify-between gap-2">
                <div class="text-sm font-bold ${st.titleCls}">${escapeHtml(r.displayHeader)}</div>
-               <span class="text-[11px] font-bold px-2.5 py-0.5 rounded-full shrink-0 ${st.badgeCls}">${st.text}</span>
+               <span class="text-[11px] font-bold px-3 py-0.5 rounded-full shrink-0 ${st.badgeCls}">${st.text}</span>
              </div>`;
 
         return `
-          <button type="button" onclick="openRoundDetail('${r.roundKey}')" class="w-full text-left ${st.cardCls} rounded-2xl p-3.5 shadow-xs transition block">
+          <button type="button" onclick="openRoundDetail('${r.roundKey}')" class="w-full text-left ${st.cardCls} rounded-3xl p-4 shadow-xs transition block">
             ${headerRowHtml}
-            <div class="flex items-center justify-between mt-2 gap-2">
-              <span class="text-xs font-medium ${st.subLeftCls}">${escapeHtml(leftDetailText)}</span>
+            <div class="flex items-center justify-between mt-2.5 gap-2">
+              <span class="text-xs font-semibold ${st.subLeftCls}">${escapeHtml(leftDetailText)}</span>
               <span class="text-xs shrink-0 ${st.actionCls}">${st.actionText}</span>
             </div>
             ${inspectorInfo}
@@ -818,7 +849,7 @@
 
       const catBadge = document.getElementById('detailCatBadge');
       catBadge.textContent = round.category === 'COLD' ? '❄️ ของเย็น (COLD)' : '📦 ของแห้ง (DRY)';
-      catBadge.className = `text-[11px] font-bold px-2 py-0.5 rounded-md text-white shrink-0 ${round.category === 'COLD' ? 'bg-[#0071BA]' : 'bg-[#fd7100]'}`;
+      catBadge.className = `text-[11px] font-bold px-3 py-0.5 rounded-full text-white shrink-0 ${round.category === 'COLD' ? 'bg-[#0079C8]' : 'bg-[#FD7100]'}`;
 
       document.getElementById('detailRoundTitle').textContent = round.displayHeader;
       document.getElementById('detailSkuCount').textContent = `${round.items.length} รายการ`;
@@ -858,18 +889,18 @@
 
       if (hasDiff) {
         stBadge.textContent = 'บันทึกรับของครบแล้ว / มีรายการของไม่ได้รับครบ';
-        stBadge.className = 'text-[10.5px] font-bold px-2 py-0.5 rounded-md bg-[#D32F2F] text-white leading-snug';
-        headerCard.className = 'bg-white border-2 border-[#D32F2F] rounded-2xl p-3.5 shadow-sm transition';
+        stBadge.className = 'text-[10.5px] font-bold px-2.5 py-0.5 rounded-full bg-[#EE3E42] text-white leading-snug';
+        headerCard.className = 'bg-white border-2 border-[#EE3E42] rounded-3xl p-4 shadow-sm transition';
       } else if (allChecked) {
         stBadge.textContent = '✓ กดรับครบแล้ว';
-        stBadge.className = 'text-[11px] font-bold px-2 py-0.5 rounded-md bg-emerald-600 text-white';
-        headerCard.className = 'bg-white border-2 border-emerald-500 rounded-2xl p-3.5 shadow-sm transition';
+        stBadge.className = 'text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-600 text-white';
+        headerCard.className = 'bg-white border-2 border-emerald-500 rounded-3xl p-4 shadow-sm transition';
       } else {
         const eff = getEffectiveRoundStatus(state.activeRound);
         const st = getStatusMeta(eff);
         stBadge.textContent = st.text;
-        stBadge.className = `text-[10.5px] font-bold px-2 py-0.5 rounded-md leading-snug ${st.badgeCls}`;
-        headerCard.className = 'bg-white border border-[#b2e0fb] rounded-2xl p-3.5 shadow-sm transition';
+        stBadge.className = `text-[10.5px] font-bold px-2.5 py-0.5 rounded-full leading-snug ${st.badgeCls}`;
+        headerCard.className = 'dq-card rounded-3xl p-4 transition';
       }
     }
 
@@ -880,26 +911,26 @@
         const diff = Number((it.actualQty - it.orderQty).toFixed(2));
         const isModified = Math.abs(diff) > 0.0001;
 
-        let cardThemeCls = 'bg-white border border-[#b2e0fb]';
-        let checkBtnCls = 'bg-white border-[#b2e0fb] text-transparent';
+        let cardThemeCls = 'bg-white border-[1.5px] border-[#CBE7FB]';
+        let checkBtnCls = 'bg-white border-[#CBE7FB] text-transparent';
         let checkIcon = '✓';
-        let stepperWrapCls = 'bg-[#f2f9fe] border-[#b2e0fb]';
-        let plusBtnCls = 'bg-[#0071BA] text-white';
-        let qtyTextCls = 'text-[#005288]';
+        let stepperWrapCls = 'bg-[#F4FAFF] border-[#CBE7FB]';
+        let plusBtnCls = 'bg-[#0079C8] text-white';
+        let qtyTextCls = 'text-[#005596]';
         let diffBadge = '';
 
         if (isModified) {
-          cardThemeCls = 'bg-red-50/75 border-2 border-[#D32F2F]';
-          checkBtnCls = 'bg-[#D32F2F] border-[#D32F2F] text-white';
+          cardThemeCls = 'bg-red-50/75 border-2 border-[#EE3E42]';
+          checkBtnCls = 'bg-[#EE3E42] border-[#EE3E42] text-white';
           checkIcon = '!';
-          stepperWrapCls = 'bg-white border-[#D32F2F]';
-          plusBtnCls = 'bg-[#D32F2F] text-white';
-          qtyTextCls = 'text-[#D32F2F]';
+          stepperWrapCls = 'bg-white border-[#EE3E42]';
+          plusBtnCls = 'bg-[#EE3E42] text-white';
+          qtyTextCls = 'text-[#EE3E42]';
 
           if (diff < 0) {
-            diffBadge = `<span class="inline-block mt-1 text-[10px] font-bold px-2 py-0.5 rounded-md bg-[#D32F2F] text-white">ไม่ได้รับครบ ขาด ${Math.abs(diff)} (สั่ง ${it.orderQty})</span>`;
+            diffBadge = `<span class="inline-block mt-1 text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-[#EE3E42] text-white">ไม่ได้รับครบ ขาด ${Math.abs(diff)} (สั่ง ${it.orderQty})</span>`;
           } else {
-            diffBadge = `<span class="inline-block mt-1 text-[10px] font-bold px-2 py-0.5 rounded-md bg-[#D32F2F] text-white">แก้ไขยอด เกิน +${diff} (สั่ง ${it.orderQty})</span>`;
+            diffBadge = `<span class="inline-block mt-1 text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-[#EE3E42] text-white">แก้ไขยอด เกิน +${diff} (สั่ง ${it.orderQty})</span>`;
           }
         } else if (it.checked) {
           cardThemeCls = 'bg-emerald-50/75 border-2 border-emerald-500';
@@ -908,26 +939,26 @@
           stepperWrapCls = 'bg-white border-emerald-400';
           plusBtnCls = 'bg-emerald-600 text-white';
           qtyTextCls = 'text-emerald-800';
-          diffBadge = `<span class="inline-block mt-1 text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-600 text-white">รับครบตามสั่ง</span>`;
+          diffBadge = `<span class="inline-block mt-1 text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-600 text-white">รับครบตามสั่ง</span>`;
         }
 
         return `
-          <div class="${cardThemeCls} rounded-2xl p-3.5 shadow-xs transition">
+          <div class="${cardThemeCls} rounded-3xl p-3.5 shadow-xs transition">
             <div class="flex items-start justify-between gap-2.5">
               <div class="flex items-start gap-2.5 min-w-0 flex-1">
                 <button type="button" onclick="toggleItemCheck(${idx})" class="mt-0.5 w-6 h-6 rounded-full border-2 flex items-center justify-center text-xs font-bold shrink-0 transition ${checkBtnCls}">${checkIcon}</button>
                 <div class="min-w-0 flex-1" onclick="toggleItemCheck(${idx})">
-                  <div class="text-[13px] leading-snug text-[#005288] break-words">
+                  <div class="text-[13px] leading-snug text-[#005596] break-words">
                     <span class="font-bold">${escapeHtml(nameParts.mainName)}</span>
-                    ${nameParts.packSuffix ? `<span class="font-normal text-[#005288]"> ${escapeHtml(nameParts.packSuffix)}</span>` : ''}
+                    ${nameParts.packSuffix ? `<span class="font-normal text-[#005596]"> ${escapeHtml(nameParts.packSuffix)}</span>` : ''}
                   </div>
-                  <div class="text-[11px] font-medium text-[#0071BA] mt-0.5">${escapeHtml(it.unit || '-')}</div>
+                  <div class="text-[11px] font-semibold text-[#0079C8] mt-0.5">${escapeHtml(it.unit || '-')}</div>
                   <div class="text-[11px] text-slate-400 mt-0.5">${escapeHtml(it.itemCode || '-')}</div>
                   ${diffBadge}
                 </div>
               </div>
               <div class="flex items-center border ${stepperWrapCls} rounded-full p-0.5 shrink-0">
-                <button type="button" onclick="adjustQty(${idx}, -1)" class="w-7 h-7 rounded-full bg-white text-[#005288] font-bold text-sm shadow-2xs active:scale-95">-</button>
+                <button type="button" onclick="adjustQty(${idx}, -1)" class="w-7 h-7 rounded-full bg-white text-[#005596] font-bold text-sm shadow-2xs active:scale-95">-</button>
                 <input type="number" step="any" value="${it.actualQty}" onchange="setExactQty(${idx}, this.value)" class="w-11 text-center bg-transparent text-xs font-bold ${qtyTextCls} focus:outline-none">
                 <button type="button" onclick="adjustQty(${idx}, 1)" class="w-7 h-7 rounded-full ${plusBtnCls} font-bold text-sm shadow-2xs active:scale-95">+</button>
               </div>
@@ -998,24 +1029,24 @@
       if (countPhotos === 0) {
         btn.disabled = true;
         btn.textContent = '📷 ต้องถ่ายรูปใบ DO ก่อนยืนยัน';
-        btn.className = 'w-full py-3 rounded-xl text-sm font-bold bg-slate-300 text-slate-600 cursor-not-allowed';
+        btn.className = 'w-full py-3 rounded-full text-sm font-bold bg-slate-300 text-slate-600 cursor-not-allowed';
         return;
       }
       if (!allChecked) {
         const checkedNum = state.draftItems.filter(it => it.checked).length;
         btn.disabled = true;
         btn.textContent = `กรุณาติ๊กเช็ครายการให้ครบ (${checkedNum}/${state.draftItems.length})`;
-        btn.className = 'w-full py-3 rounded-xl text-sm font-bold bg-slate-300 text-slate-600 cursor-not-allowed';
+        btn.className = 'w-full py-3 rounded-full text-sm font-bold bg-slate-300 text-slate-600 cursor-not-allowed';
         return;
       }
 
       btn.disabled = false;
       if (hasDiff) {
         btn.textContent = '⚠️ กดยืนยันยอดรับสินค้าจริง (มีรายการไม่ได้รับครบ)';
-        btn.className = 'w-full py-3 rounded-xl text-xs font-bold bg-[#D32F2F] hover:bg-red-700 text-white shadow-md active:scale-99 transition px-2';
+        btn.className = 'w-full py-3 rounded-full text-xs font-bold bg-[#EE3E42] hover:bg-red-600 text-white shadow-md active:scale-98 transition px-2';
       } else {
         btn.textContent = '✅ กดยืนยันยอดรับสินค้าจริง';
-        btn.className = 'w-full py-3 rounded-xl text-sm font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-md active:scale-99 transition';
+        btn.className = 'w-full py-3 rounded-full text-sm font-bold bg-[#0079C8] hover:bg-[#005596] text-white shadow-md active:scale-98 transition';
       }
     }
 
@@ -1070,15 +1101,15 @@
       grid.classList.remove('hidden');
 
       const existingHtml = state.existingPhotoUrls.map((url, idx) => `
-        <div class="relative rounded-xl overflow-hidden border border-[#b2e0fb] bg-white h-24 flex flex-col items-center justify-center p-2 text-center">
-          <a href="${url}" target="_blank" rel="noopener" class="text-[11px] font-semibold text-[#0071BA] underline">📄 ดูรูปเดิม #${idx + 1}</a>
-          <button type="button" onclick="removeExistingPhoto(${idx})" class="absolute top-1 right-1 w-5 h-5 rounded-full bg-[#D32F2F] text-white text-[10px] font-bold">✕</button>
+        <div class="relative rounded-2xl overflow-hidden border border-[#CBE7FB] bg-white h-24 flex flex-col items-center justify-center p-2 text-center">
+          <a href="${url}" target="_blank" rel="noopener" class="text-[11px] font-bold text-[#0079C8] underline">📄 ดูรูปเดิม #${idx + 1}</a>
+          <button type="button" onclick="removeExistingPhoto(${idx})" class="absolute top-1 right-1 w-5 h-5 rounded-full bg-[#EE3E42] text-white text-[10px] font-bold">✕</button>
         </div>`).join('');
 
       const newHtml = state.newPhotos.map((p, idx) => `
-        <div class="relative rounded-xl overflow-hidden border border-[#0071BA] h-24 bg-slate-100">
+        <div class="relative rounded-2xl overflow-hidden border border-[#0079C8] h-24 bg-slate-100">
           <img src="${p.dataUrl}" class="w-full h-full object-cover">
-          <button type="button" onclick="removeNewPhoto(${idx})" class="absolute top-1 right-1 w-5 h-5 rounded-full bg-[#D32F2F] text-white text-[10px] font-bold">✕</button>
+          <button type="button" onclick="removeNewPhoto(${idx})" class="absolute top-1 right-1 w-5 h-5 rounded-full bg-[#EE3E42] text-white text-[10px] font-bold">✕</button>
         </div>`).join('');
 
       grid.innerHTML = existingHtml + newHtml;
@@ -1147,7 +1178,7 @@
       const doText = state.detectedDoNumbers.length ? `เลขที่ DO: ${state.detectedDoNumbers.join(', ')}` : '';
       const warnText = Array.isArray(res.warnings) && res.warnings.length ? res.warnings.join(' • ') : 'รายการที่ยอดตรงขึ้นสีเขียว ส่วนรายการที่ไม่ตรงขึ้นสีแดงอัตโนมัติ';
       document.getElementById('ocrSummaryBody').innerHTML = `
-        ${doText ? `<div class="font-semibold text-[#0071BA]">${escapeHtml(doText)}</div>` : ''}
+        ${doText ? `<div class="font-bold text-[#0079C8]">${escapeHtml(doText)}</div>` : ''}
         <div>${escapeHtml(warnText)}</div>`;
       showToast('นำยอดจากใบ DO ไปกรอกเรียบร้อยแล้ว');
     }
@@ -1211,7 +1242,7 @@
     function showToast(msg, isError) {
       const box = document.getElementById('toastBox');
       box.textContent = msg;
-      box.className = `fixed top-16 left-1/2 -translate-x-1/2 z-50 text-white text-xs font-semibold px-4 py-2.5 rounded-full shadow-lg text-center max-w-[90vw] ${isError ? 'bg-[#D32F2F]' : 'bg-emerald-600'}`;
+      box.className = `fixed top-16 left-1/2 -translate-x-1/2 z-50 text-white text-xs font-semibold px-4 py-2.5 rounded-full shadow-lg text-center max-w-[90vw] ${isError ? 'bg-[#EE3E42]' : 'bg-[#0079C8]'}`;
       box.classList.remove('hidden');
       setTimeout(() => box.classList.add('hidden'), 3200);
     }
